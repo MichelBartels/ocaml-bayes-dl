@@ -247,7 +247,8 @@ module VarMap = struct
 
   let empty = []
 
-  let add var value map = (var, value) :: map
+  let add var value map =
+    if List.mem_assoc var map then map else (var, value) :: map
 
   let mem = List.mem_assoc
 
