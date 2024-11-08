@@ -30,15 +30,15 @@ let full : type a b. (a, b) value -> int list -> (a, b) t =
   | I64 i ->
       I64 (shape, fun _ -> i)
 
-let value_type : type a b. (a, b) t -> a Ir.value_type =
+let value_type : type a b. (a, b) t -> a Ir.tensor Ir.ValueType.t =
  fun t ->
   match t with
   | F32 (shape, _) ->
-      Ir.Tensor_type (shape, F32)
+      Ir.ValueType.Tensor_type (shape, F32)
   | I1 (shape, _) ->
-      Ir.Tensor_type (shape, I1)
+      Ir.ValueType.Tensor_type (shape, I1)
   | I64 (shape, _) ->
-      Ir.Tensor_type (shape, I64)
+      Ir.ValueType.Tensor_type (shape, I64)
 
 let get : type a b. (a, b) t -> int list -> (a, b) value =
  fun t idx ->
@@ -87,7 +87,8 @@ let to_string t =
   in
   let data = values_to_string (values t) in
   let signature =
-    Stable_hlo.value_type_to_string (value_type t |> Ir.value_type_to_stable_hlo)
+    Stable_hlo.value_type_to_string
+      (value_type t |> Ir.ValueType.tensor_to_stable_hlo)
   in
   Printf.sprintf "dense<%s> : %s" data signature
 
