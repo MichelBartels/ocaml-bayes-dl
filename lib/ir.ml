@@ -249,9 +249,9 @@ module VarMap = struct
 
   let add var value map = (var, value) :: map
 
-  let mem var map = List.assoc_opt var map |> Option.is_some
+  let mem = List.mem_assoc
 
-  let find var map = List.assoc var map
+  let find = List.assoc
 
   let bindings map = map
 end
