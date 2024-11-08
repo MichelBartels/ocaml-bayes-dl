@@ -242,11 +242,19 @@ end)
 
 type any_var = Any_var : 'a Var.t -> any_var
 
-module VarMap = Map.Make (struct
-  type t = any_var
+module VarMap = struct
+  type 'a t = (any_var * 'a) list
 
-  let compare = Stdlib.compare
-end)
+  let empty = []
+
+  let add var value map = (var, value) :: map
+
+  let mem var map = List.assoc_opt var map |> Option.is_some
+
+  let find var map = List.assoc var map
+
+  let bindings map = map
+end
 
 let vars_to_ops vars =
   let rec aux :
