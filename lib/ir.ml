@@ -61,6 +61,9 @@ module rec Var : sig
     | Argument : id * 'a tensor ValueType.t -> 'a tensor t
     | Compare : 'a tensor t * comparison_direction * 'a tensor t -> i1 tensor t
     | Constant : 'a tensor ValueType.t * string -> 'a tensor t
+    | DotProduct :
+        'a tensor t * 'a tensor t * int list * int list * int list * int list
+        -> 'a tensor t
     | Random :
         'a tensor ValueType.t
         * f32 tensor t
@@ -82,6 +85,8 @@ module rec Var : sig
   val to_annotated_value : 'a tensor t -> string * Stable_hlo.value_type
 
   val length : 'a Var.t -> int
+
+  val get_args : 'a Var.t -> id list
 end = struct
   type _ t =
     | Add : 'a tensor t * 'a tensor t -> 'a tensor t
@@ -91,6 +96,9 @@ end = struct
     | Argument : id * 'a tensor ValueType.t -> 'a tensor t
     | Compare : 'a tensor t * comparison_direction * 'a tensor t -> i1 tensor t
     | Constant : 'a tensor ValueType.t * string -> 'a tensor t
+    | DotProduct :
+        'a tensor t * 'a tensor t * int list * int list * int list * int list
+        -> 'a tensor t
     | Random :
         'a tensor ValueType.t
         * f32 tensor t
@@ -132,6 +140,17 @@ end = struct
         length x + length xs
     | _ ->
         1
+
+  let rec get_args : type a. a Var.t -> id list = function
+    | Argument (id, _) ->
+        [id]
+    | [] ->
+        []
+    | x :: xs ->
+        let l = Var.to_var_list (x :: xs) in
+        VarList.fold_left {f= (fun args var -> get_args var @ args)} [] l
+    | _ ->
+        failwith "expected nested list of arguments"
 end
 
 and ValueType : sig
@@ -179,6 +198,31 @@ end = struct
         Tensor_type (shape, I1)
     | Constant (value_type, _) ->
         value_type
+    | DotProduct
+        ( lhs
+        , rhs
+        , lhs_contracting_dims
+        , rhs_contracting_dims
+        , lhs_batching_dims
+        , rhs_batching_dims ) ->
+        let (Tensor_type (lhs_shape, element_type)) = of_var lhs in
+        let (Tensor_type (rhs_shape, _)) = of_var rhs in
+        let batching_dims =
+          List.filteri (fun i _ -> List.mem i lhs_batching_dims) lhs_shape
+        in
+        let lhs_rem_dims =
+          List.filteri
+            (fun i _ ->
+              not (List.mem i @@ lhs_batching_dims @ lhs_contracting_dims) )
+            lhs_shape
+        in
+        let rhs_rem_dims =
+          List.filteri
+            (fun i _ ->
+              not (List.mem i @@ rhs_batching_dims @ rhs_contracting_dims) )
+            rhs_shape
+        in
+        Tensor_type (batching_dims @ lhs_rem_dims @ rhs_rem_dims, element_type)
     | Random (value_type, _, _, _, _) ->
         value_type
     | [] ->
@@ -348,6 +392,38 @@ let vars_to_ops vars =
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
+      | DotProduct
+          ( lhs
+          , rhs
+          , lhs_contracting_dims
+          , rhs_contracting_dims
+          , lhs_batching_dims
+          , rhs_batching_dims ) ->
+          let output = Var.to_annotated_value var in
+          let dims_to_string dims =
+            "[" ^ String.concat "," (List.map string_of_int dims) ^ "]"
+          in
+          let lhs, cache = aux ([], cache) lhs in
+          let rhs, cache = aux ([], cache) rhs in
+          let op =
+            Stable_hlo.
+              { inputs= lhs @ rhs
+              ; outputs= [output]
+              ; name= "stablehlo.dot_general"
+              ; attributes=
+                  [ ( "dot_dimension_numbers"
+                    , "#stablehlo.dot<\nlhs_batching_dimensions = "
+                      ^ dims_to_string lhs_batching_dims
+                      ^ ",\nrhs_batching_dimensions = "
+                      ^ dims_to_string rhs_batching_dims
+                      ^ ",\nlhs_contracting_dimensions = "
+                      ^ dims_to_string lhs_contracting_dims
+                      ^ ",\nrhs_contracting_dimensions = "
+                      ^ dims_to_string rhs_contracting_dims
+                      ^ "\n>" ) ]
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
       | Random (_, a, b, shape, distribution) ->
           let a, cache = aux ([], cache) a in
           let b, cache = aux ([], cache) b in
@@ -391,41 +467,13 @@ let annotated_values_to_return_op values =
     ; attributes= []
     ; call= false }
 
-let rec get_args : type a. a Var.t -> id list = function
-  | Add (a, b) ->
-      get_args a @ get_args b
-  | Subtract (a, b) ->
-      get_args a @ get_args b
-  | Multiply (a, b) ->
-      get_args a @ get_args b
-  | Abs a ->
-      get_args a
-  | Argument (id, _) ->
-      [id]
-  | Compare (a, _, b) ->
-      get_args a @ get_args b
-  | Constant _ ->
-      []
-  | Random (_, a, b, c, _) ->
-      get_args a @ get_args b @ get_args c
-  | [] ->
-      []
-  | x :: xs ->
-      let l = Var.to_var_list (x :: xs) in
-      VarList.fold_left {f= (fun args var -> get_args var @ args)} [] l
-  | DiffVar (_, var) ->
-      get_args var
-  | DiffConst var ->
-      get_args var
-
 let create_func :
     type a b. a ValueType.t -> (a Var.t -> b Var.t) -> (a, b) Func.t =
  fun inputs body ->
   let open Hlist.Map (ValueTypeList) (VarList) in
   let args = ValueType.to_arg inputs in
   let outputs = body args in
-  let parameter_names = get_args args in
-  let parameter_names = List.sort Stdlib.compare parameter_names |> List.rev in
+  let parameter_names = Var.get_args args in
   let parameter_names = List.map string_of_int parameter_names in
   {inputs; parameter_names; outputs; name= "fn" ^ string_of_int (new_id ())}
 
@@ -459,6 +507,8 @@ let compile entry =
         all_funcs (all_funcs cache a) b
     | Constant _ ->
         cache
+    | DotProduct (a, b, _, _, _, _) ->
+        all_funcs (all_funcs cache a) b
     | Random (_, a, b, c, _) ->
         all_funcs (all_funcs (all_funcs cache a) b) c
     | [] ->
