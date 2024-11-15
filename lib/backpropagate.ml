@@ -19,34 +19,137 @@ let diff :
     -> a Ir.Var.t
     -> c Ir.VarList.t Ir.Var.t =
  fun l f inputs ->
-  let rec backprop : type a. a Ir.Var.t -> int -> a Ir.Var.t =
-    Dsl.(
-      fun v x ->
-        match v with
-        | Ir.Var.Add (v1, v2) ->
-            backprop v1 x + backprop v2 x
-        | Subtract (v1, v2) ->
-            backprop v1 x - backprop v2 x
-        | Multiply (v1, v2) ->
-            (v1 * backprop v2 x) + (v2 * backprop v1 x)
-        | Abs v ->
-            abs (backprop v x)
-        | Argument _ ->
-            zeros_like v
-        | Compare (a, dir, b) ->
-            compare dir (backprop a x) (backprop b x)
-        | Constant _ ->
-            zeros_like v
-        | Random _ ->
-            zeros_like v
-        | [] ->
-            []
-        | y :: ys ->
-            backprop y x :: backprop ys x
-        | DiffVar (id, _) ->
-            if Int.equal id x then Dsl.ones_like v else Dsl.zeros_like v
-        | DiffConst _ ->
-            Dsl.zeros_like v )
+  let opt_add :
+      type a.
+         a Ir.tensor Ir.Var.t option
+      -> a Ir.tensor Ir.Var.t option
+      -> a Ir.tensor Ir.Var.t option =
+   fun x y ->
+    match (x, y) with
+    | Some x, Some y ->
+        Some Dsl.(x + y)
+    | Some x, None | None, Some x ->
+        Some x
+    | None, None ->
+        None
+  in
+  let opt_sub :
+      type a.
+         a Ir.tensor Ir.Var.t option
+      -> a Ir.tensor Ir.Var.t option
+      -> a Ir.tensor Ir.Var.t option =
+   fun x y ->
+    match (x, y) with
+    | Some x, Some y ->
+        Some Dsl.(x - y)
+    | Some x, None ->
+        Some x
+    | None, Some x ->
+        Some Dsl.(zeros_like x)
+    | None, None ->
+        None
+  in
+  let rec backprop :
+      type a. a Ir.Var.t -> a Ir.Var.t -> int -> a Ir.Var.t option =
+   fun v grad x ->
+    match v with
+    | Ir.Var.Add (v1, v2) ->
+        opt_add (backprop v1 grad x) (backprop v2 grad x)
+    | Subtract (v1, v2) ->
+        opt_sub (backprop v1 grad x) (backprop v2 grad x)
+    | Multiply (v1, v2) ->
+        opt_add (backprop v2 Dsl.(v1 * grad) x) (backprop v1 Dsl.(v2 * grad) x)
+    | Abs v ->
+        Option.map Dsl.abs (backprop v grad x)
+    | Argument _ ->
+        None
+    | Compare _ ->
+        failwith "cannot differentiat binary comparison"
+    | Constant _ ->
+        None
+    | DotProduct
+        ( lhs
+        , rhs
+        , lhs_contracting_dims
+        , rhs_contracting_dims
+        , lhs_batching_dims
+        , rhs_batching_dims ) ->
+        opt_add
+          (backprop lhs
+             (let lhs_shape = Ir.shape_of_var v in
+              let rhs_shape = Ir.shape_of_var rhs in
+              let lhs_dims = List.init (List.length lhs_shape) Fun.id in
+              let lhs_contracting_dims =
+                List.filter
+                  (fun i ->
+                    i + List.length rhs_shape
+                    >= List.length lhs_shape
+                       + List.length rhs_contracting_dims
+                       + List.length rhs_batching_dims )
+                  lhs_dims
+              in
+              let lhs_batching_dims =
+                List.filter
+                  (fun i -> i < List.length lhs_batching_dims)
+                  lhs_dims
+              in
+              let rhs_dims = List.init (List.length rhs_shape) Fun.id in
+              let rhs_contracting_dims =
+                List.filter
+                  (fun i ->
+                    (not (List.mem i rhs_contracting_dims))
+                    && not (List.mem i rhs_batching_dims) )
+                  rhs_dims
+              in
+              DotProduct
+                ( grad
+                , rhs
+                , lhs_contracting_dims
+                , rhs_contracting_dims
+                , lhs_batching_dims
+                , rhs_batching_dims ) )
+             x )
+          (backprop rhs
+             (let rhs_shape = Ir.shape_of_var v in
+              let lhs_shape = Ir.shape_of_var lhs in
+              let rhs_dims = List.init (List.length rhs_shape) Fun.id in
+              let rhs_contracting_dims =
+                List.filter
+                  (fun i ->
+                    i >= List.length lhs_batching_dims
+                    && i + List.length lhs_contracting_dims
+                       < List.length lhs_shape )
+                  rhs_dims
+              in
+              let rhs_batching_dims =
+                List.filter
+                  (fun i -> i < List.length lhs_batching_dims)
+                  rhs_dims
+              in
+              let lhs_dims = List.init (List.length lhs_shape) Fun.id in
+              let lhs_contracting_dims =
+                List.filter
+                  (fun i ->
+                    (not (List.mem i lhs_contracting_dims))
+                    && not (List.mem i lhs_batching_dims) )
+                  lhs_dims
+              in
+              DotProduct
+                ( lhs
+                , grad
+                , lhs_contracting_dims
+                , rhs_contracting_dims
+                , lhs_batching_dims
+                , rhs_batching_dims ) )
+             x )
+    | Random _ ->
+        None
+    | [] | _ :: _ ->
+        failwith "lists cannot be backpropagated"
+    | DiffVar (id, _) ->
+        if Int.equal id x then Some grad else None
+    | DiffConst _ ->
+        None
   in
   let rec wrap_inputs :
       type a b c d. (a, b, c, d) input -> a Ir.Var.t -> a Ir.Var.t * Ir.id list
@@ -65,6 +168,13 @@ let diff :
     | Const, x ->
         (DiffConst x, [])
   in
+  let rec initial_grad : type a. a Ir.ValueType.t -> a Ir.Var.t = function
+    | Ir.ValueType.Tensor_type _ as t ->
+        Dsl.ones t
+    | List_type t ->
+        let open Hlist.Map (Ir.ValueTypeList) (Ir.VarList) in
+        map {f= initial_grad} t |> Ir.Var.from_var_list
+  in
   let rec iter_vars :
       type a b c d.
          (a, b, c, d) input
@@ -81,7 +191,15 @@ let diff :
         let output, ids = iter_vars x outputs outputs' ids in
         (output :: next, ids)
     | Var, id :: ids ->
-        let output = backprop outputs id in
+        let initial_grad = initial_grad (Ir.ValueType.of_var outputs) in
+        let output = backprop outputs initial_grad id in
+        let output =
+          match output with
+          | Some x ->
+              x
+          | None ->
+              failwith "output does not depend on input"
+        in
         (output :: next, ids)
     | Const, ids ->
         (next, ids)
