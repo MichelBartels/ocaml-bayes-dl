@@ -57,7 +57,9 @@ module rec Var : sig
     | Add : 'a tensor t * 'a tensor t -> 'a tensor t
     | Subtract : 'a tensor t * 'a tensor t -> 'a tensor t
     | Multiply : 'a tensor t * 'a tensor t -> 'a tensor t
+    | Divide : 'a tensor t * 'a tensor t -> 'a tensor t
     | Abs : 'a tensor t -> 'a tensor t
+    | Exponential : 'a tensor t -> 'a tensor t
     | Argument : id * 'a tensor ValueType.t -> 'a tensor t
     | Compare : 'a tensor t * comparison_direction * 'a tensor t -> i1 tensor t
     | Constant : 'a tensor ValueType.t * string -> 'a tensor t
@@ -92,7 +94,9 @@ end = struct
     | Add : 'a tensor t * 'a tensor t -> 'a tensor t
     | Subtract : 'a tensor t * 'a tensor t -> 'a tensor t
     | Multiply : 'a tensor t * 'a tensor t -> 'a tensor t
+    | Divide : 'a tensor t * 'a tensor t -> 'a tensor t
     | Abs : 'a tensor t -> 'a tensor t
+    | Exponential : 'a tensor t -> 'a tensor t
     | Argument : id * 'a tensor ValueType.t -> 'a tensor t
     | Compare : 'a tensor t * comparison_direction * 'a tensor t -> i1 tensor t
     | Constant : 'a tensor ValueType.t * string -> 'a tensor t
@@ -189,7 +193,11 @@ end = struct
         of_var lhs
     | Multiply (lhs, _) ->
         of_var lhs
+    | Divide (lhs, _) ->
+        of_var lhs
     | Abs var ->
+        of_var var
+    | Exponential var ->
         of_var var
     | Argument (_, value_type) ->
         value_type
@@ -354,18 +362,43 @@ let vars_to_ops vars =
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
-      | Abs var' ->
-          let var, cache = aux ([], cache) var' in
-          let output = Var.to_annotated_value var' in
+      | Divide (lhs, rhs) ->
+          let lhs, cache = aux ([], cache) lhs in
+          let rhs, cache = aux ([], cache) rhs in
+          let output = Var.to_annotated_value var in
           let op =
             Stable_hlo.
-              { inputs= var
+              { inputs= lhs @ rhs
+              ; outputs= [output]
+              ; name= "stablehlo.divide"
+              ; attributes= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | Abs var' ->
+          let var', cache = aux ([], cache) var' in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= var'
               ; outputs= [output]
               ; name= "stablehlo.abs"
               ; attributes= []
               ; call= false }
           in
-          (output :: prev_outputs, add var' (Some op, output) cache)
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | Exponential var' ->
+          let var', cache = aux ([], cache) var' in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= var'
+              ; outputs= [output]
+              ; name= "stablehlo.exponential"
+              ; attributes= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
       | Argument _ ->
           (Var.to_annotated_value var :: prev_outputs, cache)
       | Compare (lhs, direction, rhs) ->
@@ -499,7 +532,11 @@ let compile entry =
         all_funcs (all_funcs cache a) b
     | Multiply (a, b) ->
         all_funcs (all_funcs cache a) b
+    | Divide (a, b) ->
+        all_funcs (all_funcs cache a) b
     | Abs a ->
+        all_funcs cache a
+    | Exponential a ->
         all_funcs cache a
     | Argument _ ->
         cache

@@ -41,6 +41,10 @@ let ( - ) a b = Var.Subtract (a, b)
 
 let ( * ) a b = Var.Multiply (a, b)
 
+let ( / ) a b = Var.Divide (a, b)
+
+let exp a = Var.Exponential a
+
 let abs a = Var.Abs a
 
 let compare dir a b = Var.Compare (a, dir, b)

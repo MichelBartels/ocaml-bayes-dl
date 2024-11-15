@@ -45,7 +45,7 @@ let diff :
     | Some x, None ->
         Some x
     | None, Some x ->
-        Some Dsl.(zeros_like x)
+        Some Dsl.(zeros_like x - x)
     | None, None ->
         None
   in
@@ -61,6 +61,8 @@ let diff :
         opt_add (backprop v2 Dsl.(v1 * grad) x) (backprop v1 Dsl.(v2 * grad) x)
     | Abs v ->
         Option.map Dsl.abs (backprop v grad x)
+    | Exponential v ->
+        backprop v Dsl.(grad * Exponential v) x
     | Argument _ ->
         None
     | Compare _ ->
@@ -150,6 +152,10 @@ let diff :
         if Int.equal id x then Some grad else None
     | DiffConst _ ->
         None
+    | Divide (v1, v2) ->
+        opt_add
+          (backprop v1 Dsl.(grad / v2) x)
+          (backprop v2 Dsl.(grad * (Dsl.zeros_like v1 - v1) / (v2 * v2)) x)
   in
   let rec wrap_inputs :
       type a b c d. (a, b, c, d) input -> a Ir.Var.t -> a Ir.Var.t * Ir.id list
