@@ -92,19 +92,23 @@ let zeros : type a. a Ir.tensor Ir.ValueType.t -> a Ir.tensor Ir.Var.t =
 let zeros_like t = zeros (Ir.ValueType.of_var t)
 
 let norm mean stddev shape =
-  Ir.tag
-    (Var.Random
-       ( Ir.ValueType.Tensor_type (shape, F32)
-       , mean
-       , stddev
-       , Tensor.from_int_list shape |> Tensor.to_ir
-       , Normal ) )
+  Var.Random
+    ( Ir.ValueType.Tensor_type (shape, F32)
+    , mean
+    , stddev
+    , Tensor.from_int_list shape |> Tensor.to_ir
+    , Normal )
 
 let uniform low high shape =
-  Ir.tag
-    (Var.Random
-       ( Ir.ValueType.Tensor_type (shape, F32)
-       , low
-       , high
-       , Tensor.from_int_list shape |> Tensor.to_ir
-       , Uniform ) )
+  Var.Random
+    ( Ir.ValueType.Tensor_type (shape, F32)
+    , low
+    , high
+    , Tensor.from_int_list shape |> Tensor.to_ir
+    , Uniform )
+
+let sum axis x =
+  let (Tensor_type (shape, t)) = Ir.ValueType.of_var x in
+  let size = List.nth shape axis in
+  let ones = ones (Tensor_type ([size], t)) in
+  Var.DotProduct (x, ones, [axis], [0], [], [])

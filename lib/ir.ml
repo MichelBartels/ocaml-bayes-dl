@@ -89,6 +89,10 @@ module rec Var : sig
   val length : 'a Var.t -> int
 
   val get_args : 'a Var.t -> id list
+
+  type map2_fn = {fn: 'a. 'a tensor t -> 'a tensor t -> 'a tensor t}
+
+  val map2 : map2_fn -> 'a t -> 'a t -> 'a t
 end = struct
   type _ t =
     | Add : 'a tensor t * 'a tensor t -> 'a tensor t
@@ -155,6 +159,42 @@ end = struct
         VarList.fold_left {f= (fun args var -> get_args var @ args)} [] l
     | _ ->
         failwith "expected nested list of arguments"
+
+  type map2_fn = {fn: 'a. 'a tensor t -> 'a tensor t -> 'a tensor t}
+
+  let rec map2 : type a. map2_fn -> a t -> a t -> a t =
+   fun {fn} a b ->
+    match (a, b) with
+    | (Add _ as a), b ->
+        fn a b
+    | (Subtract _ as a), b ->
+        fn a b
+    | (Multiply _ as a), b ->
+        fn a b
+    | (Divide _ as a), b ->
+        fn a b
+    | (Abs _ as a), b ->
+        fn a b
+    | (Exponential _ as a), b ->
+        fn a b
+    | (Argument _ as a), b ->
+        fn a b
+    | (Compare _ as a), b ->
+        fn a b
+    | (Constant _ as a), b ->
+        fn a b
+    | (DotProduct _ as a), b ->
+        fn a b
+    | (Random _ as a), b ->
+        fn a b
+    | [], [] ->
+        []
+    | hd1 :: tl1, hd2 :: tl2 ->
+        map2 {fn} hd1 hd2 :: map2 {fn} tl1 tl2
+    | (DiffVar _ as a), b ->
+        fn a b
+    | (DiffConst _ as a), b ->
+        fn a b
 end
 
 and ValueType : sig
