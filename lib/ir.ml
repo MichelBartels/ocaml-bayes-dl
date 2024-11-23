@@ -77,6 +77,7 @@ module rec Var : sig
     | ( :: ) : 'a t * 'b VarList.t t -> ('a t -> 'b) VarList.t t
     | DiffVar : id * 'a tensor t -> 'a tensor t
     | DiffConst : 'a tensor t -> 'a tensor t
+    | BroadcastInDim : 'a tensor t * int list -> 'a tensor t
 
   val to_var_list : 'a VarList.t t -> 'a VarList.t
 
@@ -118,6 +119,7 @@ end = struct
     | ( :: ) : 'a t * 'b VarList.t t -> ('a t -> 'b) VarList.t t
     | DiffVar : id * 'a tensor t -> 'a tensor t
     | DiffConst : 'a tensor t -> 'a tensor t
+    | BroadcastInDim : 'a tensor t * int list -> 'a tensor t
 
   let rec to_var_list : type a. a VarList.t t -> a VarList.t = function
     | [] ->
@@ -194,6 +196,8 @@ end = struct
     | (DiffVar _ as a), b ->
         fn a b
     | (DiffConst _ as a), b ->
+        fn a b
+    | (BroadcastInDim _ as a), b ->
         fn a b
 end
 
@@ -284,6 +288,9 @@ end = struct
         of_var v
     | DiffConst v ->
         of_var v
+    | BroadcastInDim (var, new_dims) ->
+        let (Tensor_type (old_dims, element_type)) = of_var var in
+        Tensor_type (new_dims @ old_dims, element_type)
 
   let rec to_arg : type a. a t -> a Var.t = function
     | Tensor_type _ as t ->
@@ -528,6 +535,25 @@ let vars_to_ops vars =
           aux (prev_outputs, cache) var
       | DiffConst var ->
           aux (prev_outputs, cache) var
+      | BroadcastInDim (var', new_dims) ->
+          let var'', cache = aux ([], cache) var' in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= var''
+              ; outputs= [output]
+              ; name= "stablehlo.broadcast_in_dim"
+              ; attributes=
+                  [ ( "broadcast_dimensions"
+                    , "array<i64: "
+                      ^ String.concat ","
+                          (List.init
+                             (List.length (shape_of_var var'))
+                             (fun i -> string_of_int (i + List.length new_dims)) )
+                      ^ ">" ) ]
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
   in
   let outputs, cache = aux ([], VarMap.empty) vars in
   (outputs, VarMap.bindings cache |> List.map snd |> List.map fst |> List.rev)
@@ -596,6 +622,8 @@ let compile entry =
     | DiffVar (_, var) ->
         all_funcs cache var
     | DiffConst var ->
+        all_funcs cache var
+    | BroadcastInDim (var, _) ->
         all_funcs cache var
   in
   let main = func_to_stable_hlo entry |> Stable_hlo.func_to_string in

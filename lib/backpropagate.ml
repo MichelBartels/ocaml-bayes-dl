@@ -104,12 +104,12 @@ let diff :
                   rhs_dims
               in
               DotProduct
-                ( grad
-                , rhs
-                , lhs_contracting_dims
+                ( rhs
+                , grad
                 , rhs_contracting_dims
-                , lhs_batching_dims
-                , rhs_batching_dims ) )
+                , lhs_contracting_dims
+                , rhs_batching_dims
+                , lhs_batching_dims ) )
              x )
           (backprop rhs
              (let rhs_shape = Ir.shape_of_var v in
@@ -156,6 +156,12 @@ let diff :
         opt_add
           (backprop v1 Dsl.(grad / v2) x)
           (backprop v2 Dsl.(grad * (Dsl.zeros_like v1 - v1) / (v2 * v2)) x)
+    | BroadcastInDim (var, dims) ->
+        let reduced_grad =
+          List.fold_left (Fun.flip Dsl.sum) grad
+            (List.init (List.length dims) (Fun.const 0))
+        in
+        backprop var reduced_grad x
   in
   let rec wrap_inputs :
       type a b c d. (a, b, c, d) input -> a Ir.Var.t -> a Ir.Var.t * Ir.id list
@@ -210,10 +216,8 @@ let diff :
     | Const, ids ->
         (next, ids)
     | _ ->
-        print_endline (string_of_int (List.length ids)) ;
         failwith "should be impossible"
   in
   let inputs, ids = wrap_inputs l inputs in
-  print_endline (string_of_int (List.length ids)) ;
   let outputs = f inputs in
   fst @@ iter_vars l outputs [outputs] ids

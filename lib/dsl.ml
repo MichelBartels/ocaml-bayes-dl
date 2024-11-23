@@ -112,3 +112,9 @@ let sum axis x =
   let size = List.nth shape axis in
   let ones = ones (Tensor_type ([size], t)) in
   Var.DotProduct (x, ones, [axis], [0], [], [])
+
+let mean axis x =
+  let (Tensor_type (shape, _)) = Ir.ValueType.of_var x in
+  let size = List.nth shape axis in
+  let fact = full_f32 (1.0 /. float_of_int size) [size] in
+  Var.DotProduct (x, fact, [axis], [0], [], [])

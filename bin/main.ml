@@ -1,17 +1,20 @@
 open Iree_bindings
 open Dsl
 
-(* let sigmoid x = ones_like x / (ones_like x + exp (zeros_like x - x)) *)
+let sigmoid x = ones_like x / (ones_like x + exp (zeros_like x - x))
 
-let dense x =
+let batch_size = 128
+
+let dense in_dims out_dims x =
   let open Parameters in
-  let* w = new_param (Tensor_type ([1; 1], F32)) in
-  let* b = new_param (Tensor_type ([1], F32)) in
-  return (matmul x w + b)
+  let* w = new_param (Tensor_type ([in_dims; out_dims], F32)) in
+  let* b = new_param (Tensor_type ([out_dims], F32)) in
+  let b = Ir.Var.BroadcastInDim (b, [batch_size]) in
+  return @@ sigmoid (matmul x w + b)
 
 let mse x y =
   let diff = x - y in
-  diff * diff
+  mean 0 (mean 0 (diff * diff))
 
 let optim f =
   let open Parameters in
@@ -20,7 +23,7 @@ let optim f =
    fun grad ->
     match Ir.ValueType.of_var grad with
     | Tensor_type (_, F32) ->
-        grad * full_like (F32 0.1) grad
+        grad * full_like (F32 0.0001) grad
     | Tensor_type (_, I1) ->
         grad
     | Tensor_type (_, I64) ->
@@ -30,14 +33,17 @@ let optim f =
 
 let f x y =
   let open Parameters in
-  let* z = dense x in
+  let* z = dense 784 128 x in
+  let* z = dense 128 10 z in
   return (mse z y)
 
 let f x y = optim (f x y)
 
 let f =
   Parameters.create_func
-    (List_type [Tensor_type ([2; 1], F32); Tensor_type ([2; 1], F32)])
+    (List_type
+       [ Tensor_type ([batch_size; 784], F32)
+       ; Tensor_type ([batch_size; 10], F32) ] )
     (fun [x; y] -> f x y)
 
 let f_compiled = Ir.compile f
