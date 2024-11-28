@@ -5,7 +5,7 @@ let sigmoid x = ones_like x / (ones_like x + exp (zeros_like x - x))
 
 let tanh x = (exp x - exp (zeros_like x - x)) / (exp x + exp (zeros_like x - x))
 
-let batch_size = 128
+let batch_size = 512
 
 let dense ?(activation = sigmoid) in_dims out_dims x =
   let open Parameters in
@@ -38,13 +38,12 @@ let decoder z =
   let* z = dense 512 784 z in
   return z
 
-let mse x y =
-  let diff = x - y in
-  mean 0 (mean 0 (diff * diff))
-
 let kl mean logvar =
-  full_like (F32 0.5) mean
-  * (ones_like mean + logvar - (mean * mean) - exp logvar)
+  Dsl.sum 0 @@ Dsl.mean 0
+  @@ full_like (F32 ~-.0.5) mean
+     * (ones_like mean + logvar - (mean * mean) - exp logvar)
+
+let mse x x' = sum 0 (mean 0 ((x - x') * (x - x')))
 
 let vae x =
   let open Parameters in
@@ -52,9 +51,8 @@ let vae x =
   let z = reparametrize mean' logvar in
   let* x' = decoder z in
   let kl = kl mean' logvar in
-  let kl = mean 0 (mean 0 kl) in
   let mse = mse x x' in
-  return (kl + mse)
+  return (mse + kl)
 
 let optim f =
   let open Parameters in
@@ -63,7 +61,7 @@ let optim f =
    fun grad ->
     match Ir.ValueType.of_var grad with
     | Tensor_type (_, F32) ->
-        grad * full_like (F32 0.0001) grad
+        grad * full_like (F32 0.02) grad
     | Tensor_type (_, I1) ->
         grad
     | Tensor_type (_, I64) ->
@@ -71,15 +69,42 @@ let optim f =
   in
   return [loss; Ir.Var.map2 {fn= (fun p g -> p - scale_grad g)} params grad]
 
-let main x = optim (vae x)
+let train x = optim (vae x)
 
-let main_compiled =
+let train_compiled =
   let func =
-    Parameters.create_func (Tensor_type ([batch_size; 784], F32)) main
+    Parameters.create_func (Tensor_type ([batch_size; 784], F32)) train
   in
-  print_endline "Compiling..." ;
+  print_endline "Compiling train function..." ;
+  Ir.compile func
+
+let reconstruct x =
+  let open Parameters in
+  let* [mean'; logvar] = encoder x in
+  let z = reparametrize mean' logvar in
+  let* x' = decoder z in
+  return x'
+
+let reconstruct_compiled =
+  let func =
+    Parameters.create_func (Tensor_type ([batch_size; 784], F32)) reconstruct
+  in
+  print_endline "Compiling reconstruct function..." ;
+  Ir.compile func
+
+let decoder_compiled =
+  let func =
+    Parameters.create_func
+      (Tensor_type ([batch_size; embedding_dim], F32))
+      decoder
+  in
+  print_endline "Compiling decoder function..." ;
   Ir.compile func
 
 let () =
-  print_endline main_compiled ;
-  Compile.compile main_compiled "out.vmfb"
+  print_endline train_compiled ;
+  Compile.compile train_compiled "train.vmfb" ;
+  print_endline reconstruct_compiled ;
+  Compile.compile reconstruct_compiled "reconstruct.vmfb" ;
+  print_endline decoder_compiled ;
+  Compile.compile decoder_compiled "decoder.vmfb"

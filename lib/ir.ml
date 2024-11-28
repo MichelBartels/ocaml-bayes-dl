@@ -78,6 +78,7 @@ module rec Var : sig
     | DiffVar : id * 'a tensor t -> 'a tensor t
     | DiffConst : 'a tensor t -> 'a tensor t
     | BroadcastInDim : 'a tensor t * int list -> 'a tensor t
+    | Transpose : 'a tensor t * int list -> 'a tensor t
 
   val to_var_list : 'a VarList.t t -> 'a VarList.t
 
@@ -120,6 +121,7 @@ end = struct
     | DiffVar : id * 'a tensor t -> 'a tensor t
     | DiffConst : 'a tensor t -> 'a tensor t
     | BroadcastInDim : 'a tensor t * int list -> 'a tensor t
+    | Transpose : 'a tensor t * int list -> 'a tensor t
 
   let rec to_var_list : type a. a VarList.t t -> a VarList.t = function
     | [] ->
@@ -188,6 +190,8 @@ end = struct
     | (DotProduct _ as a), b ->
         fn a b
     | (Random _ as a), b ->
+        fn a b
+    | (Transpose _ as a), b ->
         fn a b
     | [], [] ->
         []
@@ -260,21 +264,26 @@ end = struct
         let (Tensor_type (lhs_shape, element_type)) = of_var lhs in
         let (Tensor_type (rhs_shape, _)) = of_var rhs in
         let batching_dims =
-          List.filteri (fun i _ -> List.mem i lhs_batching_dims) lhs_shape
+          List.map (fun i -> List.nth lhs_shape i) lhs_batching_dims
         in
-        let lhs_rem_dims =
+        let lhs_remaining_dims =
           List.filteri
             (fun i _ ->
-              not (List.mem i @@ lhs_batching_dims @ lhs_contracting_dims) )
+              not
+                (List.mem i lhs_batching_dims || List.mem i lhs_contracting_dims)
+              )
             lhs_shape
         in
-        let rhs_rem_dims =
+        let rhs_remaining_dims =
           List.filteri
             (fun i _ ->
-              not (List.mem i @@ rhs_batching_dims @ rhs_contracting_dims) )
+              not
+                (List.mem i rhs_batching_dims || List.mem i rhs_contracting_dims)
+              )
             rhs_shape
         in
-        Tensor_type (batching_dims @ lhs_rem_dims @ rhs_rem_dims, element_type)
+        Tensor_type
+          (batching_dims @ lhs_remaining_dims @ rhs_remaining_dims, element_type)
     | Random (value_type, _, _, _, _) ->
         value_type
     | [] ->
@@ -291,6 +300,10 @@ end = struct
     | BroadcastInDim (var, new_dims) ->
         let (Tensor_type (old_dims, element_type)) = of_var var in
         Tensor_type (new_dims @ old_dims, element_type)
+    | Transpose (var, permutation) ->
+        let (Tensor_type (shape, element_type)) = of_var var in
+        let new_shape = List.map (fun i -> List.nth shape i) permutation in
+        Tensor_type (new_shape, element_type)
 
   let rec to_arg : type a. a t -> a Var.t = function
     | Tensor_type _ as t ->
@@ -554,6 +567,28 @@ let vars_to_ops vars =
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
+      | Transpose (var', permutation) ->
+          if List.length permutation = 0 then
+            Stdlib.(
+              if List.length (shape_of_var var') = 0 then
+                aux (prev_outputs, cache) var'
+              else failwith "expected non-empty permutation" )
+          else
+            let var'', cache = aux ([], cache) var' in
+            let output = Var.to_annotated_value var in
+            let op =
+              Stable_hlo.
+                { inputs= var''
+                ; outputs= [output]
+                ; name= "stablehlo.transpose"
+                ; attributes=
+                    [ ( "permutation"
+                      , "array<i64: "
+                        ^ String.concat "," (List.map string_of_int permutation)
+                        ^ ">" ) ]
+                ; call= false }
+            in
+            (output :: prev_outputs, add var (Some op, output) cache)
   in
   let outputs, cache = aux ([], VarMap.empty) vars in
   (outputs, VarMap.bindings cache |> List.map snd |> List.map fst |> List.rev)
@@ -624,6 +659,8 @@ let compile entry =
     | DiffConst var ->
         all_funcs cache var
     | BroadcastInDim (var, _) ->
+        all_funcs cache var
+    | Transpose (var, _) ->
         all_funcs cache var
   in
   let main = func_to_stable_hlo entry |> Stable_hlo.func_to_string in

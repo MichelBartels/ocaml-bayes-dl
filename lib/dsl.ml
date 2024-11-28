@@ -118,3 +118,14 @@ let mean axis x =
   let size = List.nth shape axis in
   let fact = full_f32 (1.0 /. float_of_int size) [size] in
   Var.DotProduct (x, fact, [axis], [0], [], [])
+
+let transpose var permutation =
+  let shape = Ir.shape_of_var var in
+  if Stdlib.(List.length permutation <> List.length shape) then
+    failwith "Permutation length must match tensor rank" ;
+  if
+    not
+      Stdlib.(
+        List.sort compare permutation = List.init (List.length shape) Fun.id )
+  then failwith "Invalid permutation" ;
+  Var.Transpose (var, permutation)
