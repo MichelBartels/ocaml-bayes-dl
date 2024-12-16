@@ -9,7 +9,7 @@ let value_to_string : type a b. (a, b) value -> string =
  fun v ->
   match v with
   | F32 f ->
-      string_of_float f
+      Printf.sprintf "%f10" f
   | I1 b ->
       string_of_bool b
   | I64 i ->
@@ -98,3 +98,7 @@ let to_ir t =
   Ir.Var.Constant (value_type, repr)
 
 let from_int_list l = I64 ([List.length l], fun i -> List.nth l (List.hd i))
+
+let from_float_list l = F32 ([List.length l], fun i -> List.nth l (List.hd i))
+
+let scalar_f32 f = F32 ([], fun _ -> f)

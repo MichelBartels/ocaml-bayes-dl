@@ -60,13 +60,23 @@ let diff :
     | Multiply (v1, v2) ->
         opt_add (backprop v2 Dsl.(v1 * grad) x) (backprop v1 Dsl.(v2 * grad) x)
     | Abs v ->
-        Option.map Dsl.abs (backprop v grad x)
+        Option.map Dsl.abs (backprop v grad x) (* TODO: This is wrong *)
+    | Ln v ->
+        Option.map Dsl.(fun grad -> grad / v) (backprop v grad x)
     | Exponential v ->
         backprop v Dsl.(grad * Exponential v) x
+    | Pow (v1, v2) ->
+        opt_add
+          (backprop v1 Dsl.(grad * v * v1 / v2) x)
+          (backprop v2 Dsl.(grad * v * ln v1) x)
     | Argument _ ->
         None
     | Compare _ ->
-        failwith "cannot differentiat binary comparison"
+        failwith "cannot differentiate binary comparison"
+    | Min _ ->
+        failwith "cannot differentiate min"
+    | Max _ ->
+        failwith "cannot differentiate max"
     | Constant _ ->
         None
     | DotProduct

@@ -59,9 +59,13 @@ module rec Var : sig
     | Multiply : 'a tensor t * 'a tensor t -> 'a tensor t
     | Divide : 'a tensor t * 'a tensor t -> 'a tensor t
     | Abs : 'a tensor t -> 'a tensor t
+    | Ln : 'a tensor t -> 'a tensor t
     | Exponential : 'a tensor t -> 'a tensor t
+    | Pow : 'a tensor t * 'a tensor t -> 'a tensor t
     | Argument : id * 'a tensor ValueType.t -> 'a tensor t
     | Compare : 'a tensor t * comparison_direction * 'a tensor t -> i1 tensor t
+    | Min : 'a tensor t * 'a tensor t -> 'a tensor t
+    | Max : 'a tensor t * 'a tensor t -> 'a tensor t
     | Constant : 'a tensor ValueType.t * string -> 'a tensor t
     | DotProduct :
         'a tensor t * 'a tensor t * int list * int list * int list * int list
@@ -102,9 +106,13 @@ end = struct
     | Multiply : 'a tensor t * 'a tensor t -> 'a tensor t
     | Divide : 'a tensor t * 'a tensor t -> 'a tensor t
     | Abs : 'a tensor t -> 'a tensor t
+    | Ln : 'a tensor t -> 'a tensor t
     | Exponential : 'a tensor t -> 'a tensor t
+    | Pow : 'a tensor t * 'a tensor t -> 'a tensor t
     | Argument : id * 'a tensor ValueType.t -> 'a tensor t
     | Compare : 'a tensor t * comparison_direction * 'a tensor t -> i1 tensor t
+    | Min : 'a tensor t * 'a tensor t -> 'a tensor t
+    | Max : 'a tensor t * 'a tensor t -> 'a tensor t
     | Constant : 'a tensor ValueType.t * string -> 'a tensor t
     | DotProduct :
         'a tensor t * 'a tensor t * int list * int list * int list * int list
@@ -179,11 +187,19 @@ end = struct
         fn a b
     | (Abs _ as a), b ->
         fn a b
+    | Ln a, b ->
+        fn a b
     | (Exponential _ as a), b ->
+        fn a b
+    | (Pow _ as a), b ->
         fn a b
     | (Argument _ as a), b ->
         fn a b
     | (Compare _ as a), b ->
+        fn a b
+    | (Min _ as a), b ->
+        fn a b
+    | (Max _ as a), b ->
         fn a b
     | (Constant _ as a), b ->
         fn a b
@@ -245,13 +261,21 @@ end = struct
         of_var lhs
     | Abs var ->
         of_var var
+    | Ln var ->
+        of_var var
     | Exponential var ->
         of_var var
+    | Pow (lhs, _) ->
+        of_var lhs
     | Argument (_, value_type) ->
         value_type
     | Compare (a, _, _) ->
         let (Tensor_type (shape, _)) = of_var a in
         Tensor_type (shape, I1)
+    | Min (lhs, _) ->
+        of_var lhs
+    | Max (lhs, _) ->
+        of_var lhs
     | Constant (value_type, _) ->
         value_type
     | DotProduct
@@ -447,6 +471,18 @@ let vars_to_ops vars =
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
+      | Ln var' ->
+          let var', cache = aux ([], cache) var' in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= var'
+              ; outputs= [output]
+              ; name= "stablehlo.log"
+              ; attributes= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
       | Exponential var' ->
           let var', cache = aux ([], cache) var' in
           let output = Var.to_annotated_value var in
@@ -455,6 +491,19 @@ let vars_to_ops vars =
               { inputs= var'
               ; outputs= [output]
               ; name= "stablehlo.exponential"
+              ; attributes= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | Pow (lhs, rhs) ->
+          let lhs, cache = aux ([], cache) lhs in
+          let rhs, cache = aux ([], cache) rhs in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= lhs @ rhs
+              ; outputs= [output]
+              ; name= "stablehlo.power"
               ; attributes= []
               ; call= false }
           in
@@ -471,6 +520,32 @@ let vars_to_ops vars =
               ; outputs= [output]
               ; name= "stablehlo.compare"
               ; attributes= [attribute_of_comparison_direction direction]
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | Min (lhs, rhs) ->
+          let lhs, cache = aux ([], cache) lhs in
+          let rhs, cache = aux ([], cache) rhs in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= lhs @ rhs
+              ; outputs= [output]
+              ; name= "stablehlo.minimum"
+              ; attributes= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | Max (lhs, rhs) ->
+          let lhs, cache = aux ([], cache) lhs in
+          let rhs, cache = aux ([], cache) rhs in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= lhs @ rhs
+              ; outputs= [output]
+              ; name= "stablehlo.maximum"
+              ; attributes= []
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
@@ -637,11 +712,19 @@ let compile entry =
         all_funcs (all_funcs cache a) b
     | Abs a ->
         all_funcs cache a
+    | Ln a ->
+        all_funcs cache a
     | Exponential a ->
         all_funcs cache a
+    | Pow (a, b) ->
+        all_funcs (all_funcs cache a) b
     | Argument _ ->
         cache
     | Compare (a, _, b) ->
+        all_funcs (all_funcs cache a) b
+    | Min (a, b) ->
+        all_funcs (all_funcs cache a) b
+    | Max (a, b) ->
         all_funcs (all_funcs cache a) b
     | Constant _ ->
         cache

@@ -45,9 +45,17 @@ let ( / ) a b = Var.Divide (a, b)
 
 let exp a = Var.Exponential a
 
+let pow a b = Var.Pow (a, b)
+
 let abs a = Var.Abs a
 
+let ln a = Var.Ln a
+
 let compare dir a b = Var.Compare (a, dir, b)
+
+let min a b = Var.Min (a, b)
+
+let max a b = Var.Max (a, b)
 
 let ( = ) a = compare Ir.Eq a
 
@@ -69,6 +77,8 @@ let full_i1 value = full (I1 value)
 
 let full_like value var =
   Ir.shape_of_var var |> Tensor.full value |> Tensor.to_ir
+
+let sqrt a = pow a @@ full_like (F32 0.5) a
 
 let ones : type a. a Ir.tensor Ir.ValueType.t -> a Ir.tensor Ir.Var.t = function
   | Tensor_type (shape, F32) ->
@@ -129,3 +139,5 @@ let transpose var permutation =
         List.sort compare permutation = List.init (List.length shape) Fun.id )
   then failwith "Invalid permutation" ;
   Var.Transpose (var, permutation)
+
+let scalar_f32 = Fun.compose Tensor.to_ir Tensor.scalar_f32
