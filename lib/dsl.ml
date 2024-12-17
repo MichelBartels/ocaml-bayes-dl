@@ -69,14 +69,14 @@ let ( <= ) a = compare Ir.Le a
 
 let ( < ) a = compare Ir.Lt a
 
-let full value shape = Tensor.full value shape |> Tensor.to_ir
+let full value shape =
+  Ir.Var.BroadcastInDim (Ir.Tensor.full value [] |> Ir.Tensor.to_ir, shape)
 
 let full_f32 value = full (F32 value)
 
 let full_i1 value = full (I1 value)
 
-let full_like value var =
-  Ir.shape_of_var var |> Tensor.full value |> Tensor.to_ir
+let full_like value var = Ir.shape_of_var var |> full value
 
 let sqrt a = pow a @@ full_like (F32 0.5) a
 
@@ -106,7 +106,7 @@ let norm mean stddev shape =
     ( Ir.ValueType.Tensor_type (shape, F32)
     , mean
     , stddev
-    , Tensor.from_int_list shape |> Tensor.to_ir
+    , Ir.Tensor.from_int_list shape |> Ir.Tensor.to_ir
     , Normal )
 
 let uniform low high shape =
@@ -114,7 +114,7 @@ let uniform low high shape =
     ( Ir.ValueType.Tensor_type (shape, F32)
     , low
     , high
-    , Tensor.from_int_list shape |> Tensor.to_ir
+    , Ir.Tensor.from_int_list shape |> Ir.Tensor.to_ir
     , Uniform )
 
 let sum axis x =
@@ -140,4 +140,6 @@ let transpose var permutation =
   then failwith "Invalid permutation" ;
   Var.Transpose (var, permutation)
 
-let scalar_f32 = Fun.compose Tensor.to_ir Tensor.scalar_f32
+let ( @. ) = Fun.compose
+
+let scalar_f32 = Fun.compose Ir.Tensor.to_ir Ir.Tensor.scalar_f32

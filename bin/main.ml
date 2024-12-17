@@ -66,7 +66,6 @@ let train_compiled =
   let func =
     Parameters.create_func (Tensor_type ([batch_size; 1; 784], F32)) train
   in
-  print_endline "Compiling train function..." ;
   Ir.compile func
 
 let reconstruct x =
@@ -80,7 +79,6 @@ let reconstruct_compiled =
   let func =
     Parameters.create_func (Tensor_type ([batch_size; 1; 784], F32)) reconstruct
   in
-  print_endline "Compiling reconstruct function..." ;
   Ir.compile func
 
 let decoder_compiled =
@@ -89,7 +87,6 @@ let decoder_compiled =
       (Tensor_type ([batch_size; 1; embedding_dim], F32))
       decoder
   in
-  print_endline "Compiling decoder function..." ;
   Ir.compile func
 
 let () =
@@ -101,7 +98,7 @@ let () =
   Compile.compile decoder_compiled "decoder.vmfb"
 
 (* let main = *)
-(*   Backpropagate.diff [Var; Var] (fun [a; b] -> *)
+(*   Backpropagate.diff Var (fun [a; b] -> *)
 (*       matmul a (Ir.Var.BroadcastInDim (b, [4])) ) *)
 
 (* let main = *)

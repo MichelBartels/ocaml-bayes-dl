@@ -1,7 +1,7 @@
 (* (input_type, old_output_type, list end, output list) *)
 type (_, _, _, _) input =
-  | Var : ('a Ir.tensor, 'b, 'c, 'b Ir.Var.t -> 'c) input
-  | Const : ('a Ir.tensor, 'b, 'c, 'c) input
+  | Var : ('a, 'b, 'c, 'a Ir.Var.t -> 'c) input
+  | Const : ('a, 'b, 'c, 'c) input
   | [] : (unit Ir.VarList.t, 'a, 'b, unit Ir.VarList.t Ir.Var.t -> 'b) input
   | ( :: ) :
       ('a, 'b, 'c, 'd) input
@@ -187,21 +187,24 @@ let diff :
         backprop var (Ir.Var.Transpose (grad, inverse_permutation)) x
   in
   let rec wrap_inputs :
-      type a b c d. (a, b, c, d) input -> a Ir.Var.t -> a Ir.Var.t * Ir.id list
-      =
+      type a b c d. (a, b, c, d) input -> a Ir.Var.t -> a Ir.Var.t =
    fun l1 l2 ->
     match (l1, l2) with
     | [], [] ->
-        ([], [])
+        []
     | x :: xs, y :: ys ->
-        let input, ids1 = wrap_inputs x y in
-        let inputs, ids2 = wrap_inputs xs ys in
-        (input :: inputs, ids2 @ ids1)
+        let input = wrap_inputs x y in
+        let inputs = wrap_inputs xs ys in
+        input :: inputs
     | Var, x ->
-        let id = Ir.new_id () in
-        (DiffVar (id, x), [id])
+        Ir.Var.map
+          { fn=
+              (fun x ->
+                let id = Ir.new_id () in
+                DiffVar (id, x) ) }
+          x
     | Const, x ->
-        (DiffConst x, [])
+        Ir.Var.map {fn= (fun x -> DiffConst x)} x
   in
   let rec initial_grad : type a. a Ir.ValueType.t -> a Ir.Var.t = function
     | Ir.ValueType.Tensor_type _ as t ->
@@ -210,22 +213,48 @@ let diff :
         let open Hlist.Map (Ir.ValueTypeList) (Ir.VarList) in
         map {f= initial_grad} t |> Ir.Var.from_var_list
   in
+  let assert_same_type : type a b. a Ir.Var.t -> b Ir.Var.t -> b Ir.Var.t =
+   fun x y ->
+    match (Ir.ValueType.of_var x, Ir.ValueType.of_var y) with
+    | ( Ir.ValueType.Tensor_type (s1, Ir.F32)
+      , Ir.ValueType.Tensor_type (s2, Ir.F32) )
+      when s1 = s2 ->
+        x
+    | Ir.ValueType.Tensor_type (s1, Ir.I1), Ir.ValueType.Tensor_type (s2, Ir.I1)
+      when s1 = s2 ->
+        x
+    | ( Ir.ValueType.Tensor_type (s1, Ir.I64)
+      , Ir.ValueType.Tensor_type (s2, Ir.I64) )
+      when s1 = s2 ->
+        x
+    | Ir.ValueType.Tensor_type _, Ir.ValueType.Tensor_type _ ->
+        failwith "different tensor types"
+        (* TODO: Make this less hacky. Maybe just cast? *)
+    | _ ->
+        failwith "different types"
+  in
   let rec iter_vars :
       type a b c d.
          (a, b, c, d) input
+      -> a Ir.Var.t
       -> b Ir.Var.t
       -> c Ir.VarList.t Ir.Var.t
-      -> Ir.id list
-      -> d Ir.VarList.t Ir.Var.t * Ir.id list =
-   fun l outputs next ids ->
-    match (l, ids) with
-    | [], ids ->
-        ([] :: next, ids)
-    | x :: xs, ids ->
-        let outputs' :: _, ids = iter_vars xs outputs next ids in
-        let output, ids = iter_vars x outputs outputs' ids in
-        (output :: next, ids)
-    | Var, id :: ids ->
+      -> d Ir.VarList.t Ir.Var.t =
+   fun l inputs outputs next ->
+    match (l, inputs) with
+    | [], [] ->
+        [] :: next
+    | x :: xs, y :: ys ->
+        let (outputs' :: _) = iter_vars xs ys outputs next in
+        let output = iter_vars x y outputs outputs' in
+        output :: next
+    | Var, x :: xs ->
+        let (outputs' :: _) = iter_vars Var xs outputs next in
+        let output = iter_vars Var x outputs outputs' in
+        output :: next
+    | Var, [] ->
+        [] :: next
+    | Var, DiffVar (id, x) ->
         let initial_grad = initial_grad (Ir.ValueType.of_var outputs) in
         let output = backprop outputs initial_grad id in
         let output =
@@ -235,12 +264,13 @@ let diff :
           | None ->
               failwith "output does not depend on input"
         in
-        (output :: next, ids)
-    | Const, ids ->
-        (next, ids)
+        let output = assert_same_type output x in
+        output :: next
+    | Const, DiffConst _ ->
+        next
     | _ ->
         failwith "should be impossible"
   in
-  let inputs, ids = wrap_inputs l inputs in
+  let inputs = wrap_inputs l inputs in
   let outputs = f inputs in
-  fst @@ iter_vars l outputs [outputs] ids
+  iter_vars l inputs outputs [outputs]

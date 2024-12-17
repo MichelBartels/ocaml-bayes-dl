@@ -66,7 +66,7 @@ module rec Var : sig
     | Compare : 'a tensor t * comparison_direction * 'a tensor t -> i1 tensor t
     | Min : 'a tensor t * 'a tensor t -> 'a tensor t
     | Max : 'a tensor t * 'a tensor t -> 'a tensor t
-    | Constant : 'a tensor ValueType.t * string -> 'a tensor t
+    | Constant : 'a tensor ValueType.t * ('a, 'b) Tensor.t -> 'a tensor t
     | DotProduct :
         'a tensor t * 'a tensor t * int list * int list * int list * int list
         -> 'a tensor t
@@ -99,6 +99,14 @@ module rec Var : sig
   type map2_fn = {fn: 'a. 'a tensor t -> 'a tensor t -> 'a tensor t}
 
   val map2 : map2_fn -> 'a t -> 'a t -> 'a t
+
+  type 'b map_acc_fn = {fn: 'a. 'a tensor t -> 'b -> 'a tensor t * 'b}
+
+  val map_acc : 'b map_acc_fn -> 'a t -> 'b -> 'a t * 'b
+
+  type map_fn = {fn: 'a. 'a tensor t -> 'a tensor t}
+
+  val map : map_fn -> 'a t -> 'a t
 end = struct
   type _ t =
     | Add : 'a tensor t * 'a tensor t -> 'a tensor t
@@ -113,7 +121,7 @@ end = struct
     | Compare : 'a tensor t * comparison_direction * 'a tensor t -> i1 tensor t
     | Min : 'a tensor t * 'a tensor t -> 'a tensor t
     | Max : 'a tensor t * 'a tensor t -> 'a tensor t
-    | Constant : 'a tensor ValueType.t * string -> 'a tensor t
+    | Constant : 'a tensor ValueType.t * ('a, 'b) Tensor.t -> 'a tensor t
     | DotProduct :
         'a tensor t * 'a tensor t * int list * int list * int list * int list
         -> 'a tensor t
@@ -174,51 +182,68 @@ end = struct
 
   type map2_fn = {fn: 'a. 'a tensor t -> 'a tensor t -> 'a tensor t}
 
-  let rec map2 : type a. map2_fn -> a t -> a t -> a t =
-   fun {fn} a b ->
+  type 'b map2_acc_fn =
+    {fn: 'a. 'a tensor t -> 'a tensor t -> 'b -> 'a tensor t * 'b}
+
+  let rec map2_acc : type a b. b map2_acc_fn -> a t -> a t -> b -> a t * b =
+   fun {fn} a b acc ->
     match (a, b) with
     | (Add _ as a), b ->
-        fn a b
+        fn a b acc
     | (Subtract _ as a), b ->
-        fn a b
+        fn a b acc
     | (Multiply _ as a), b ->
-        fn a b
+        fn a b acc
     | (Divide _ as a), b ->
-        fn a b
+        fn a b acc
     | (Abs _ as a), b ->
-        fn a b
+        fn a b acc
     | Ln a, b ->
-        fn a b
+        fn a b acc
     | (Exponential _ as a), b ->
-        fn a b
+        fn a b acc
     | (Pow _ as a), b ->
-        fn a b
+        fn a b acc
     | (Argument _ as a), b ->
-        fn a b
+        fn a b acc
     | (Compare _ as a), b ->
-        fn a b
+        fn a b acc
     | (Min _ as a), b ->
-        fn a b
+        fn a b acc
     | (Max _ as a), b ->
-        fn a b
+        fn a b acc
     | (Constant _ as a), b ->
-        fn a b
+        fn a b acc
     | (DotProduct _ as a), b ->
-        fn a b
+        fn a b acc
     | (Random _ as a), b ->
-        fn a b
+        fn a b acc
     | (Transpose _ as a), b ->
-        fn a b
+        fn a b acc
     | [], [] ->
-        []
+        ([], acc)
     | hd1 :: tl1, hd2 :: tl2 ->
-        map2 {fn} hd1 hd2 :: map2 {fn} tl1 tl2
+        let tl, acc = map2_acc {fn} tl1 tl2 acc in
+        let hd, acc = map2_acc {fn} hd1 hd2 acc in
+        (hd :: tl, acc)
     | (DiffVar _ as a), b ->
-        fn a b
+        fn a b acc
     | (DiffConst _ as a), b ->
-        fn a b
+        fn a b acc
     | (BroadcastInDim _ as a), b ->
-        fn a b
+        fn a b acc
+
+  let map2 ({fn} : map2_fn) a b =
+    map2_acc {fn= (fun a b () -> (fn a b, ()))} a b () |> fst
+
+  type 'b map_acc_fn = {fn: 'a. 'a tensor t -> 'b -> 'a tensor t * 'b}
+
+  let map_acc ({fn} : 'a map_acc_fn) a acc =
+    map2_acc {fn= (fun a _ acc -> fn a acc)} a a acc
+
+  type map_fn = {fn: 'a. 'a tensor t -> 'a tensor t}
+
+  let map ({fn} : map_fn) a = map2 {fn= (fun a _ -> fn a)} a a
 end
 
 and ValueType : sig
@@ -365,6 +390,144 @@ end = struct
     ; parameter_names: string list
     ; outputs: 'b Var.t
     ; name: string }
+end
+
+and Tensor : sig
+  type ('a, 'b) t
+
+  type (_, _) value =
+    | F32 : float -> (f32, float) value
+    | I1 : bool -> (i1, bool) value
+    | I64 : int -> (i64, int) value
+
+  val full : ('a, 'b) value -> int list -> ('a, 'b) t
+
+  val value_type : ('a, 'b) t -> 'a tensor ValueType.t
+
+  val get : ('a, 'b) t -> int list -> ('a, 'b) value
+
+  val shape : ('a, 'b) t -> shape
+
+  val to_string : ('a, 'b) t -> string
+
+  val to_ir : ('a, 'b) t -> 'a tensor Var.t
+
+  val from_int_list : int list -> (i64, int) t
+
+  val from_float_list : float list -> (f32, float) t
+
+  val scalar_f32 : float -> (f32, float) t
+end = struct
+  type _ tensor_values =
+    | Full : 'a -> 'a tensor_values
+    | List : 'a list -> 'a tensor_values
+
+  type ('a, 'b) generic_tensor = int list * 'b tensor_values
+
+  type (_, _) value =
+    | F32 : float -> (f32, float) value
+    | I1 : bool -> (i1, bool) value
+    | I64 : int -> (i64, int) value
+
+  let value_to_string : type a b. (a, b) value -> string =
+   fun v ->
+    match v with
+    | F32 f ->
+        Printf.sprintf "%f10" f
+    | I1 b ->
+        string_of_bool b
+    | I64 i ->
+        string_of_int i
+
+  type (_, _) t =
+    | F32 : (f32, float) generic_tensor -> (f32, float) t
+    | I1 : (i1, bool) generic_tensor -> (i1, bool) t
+    | I64 : (i64, int) generic_tensor -> (i64, int) t
+
+  let full : type a b. (a, b) value -> int list -> (a, b) t =
+   fun value shape ->
+    match value with
+    | F32 f ->
+        F32 (shape, Full f)
+    | I1 b ->
+        I1 (shape, Full b)
+    | I64 i ->
+        I64 (shape, Full i)
+
+  let value_type : type a b. (a, b) t -> a tensor ValueType.t =
+   fun t ->
+    match t with
+    | F32 (shape, _) ->
+        ValueType.Tensor_type (shape, F32)
+    | I1 (shape, _) ->
+        ValueType.Tensor_type (shape, I1)
+    | I64 (shape, _) ->
+        ValueType.Tensor_type (shape, I64)
+
+  let calc_value : type a. a tensor_values -> int list -> a = function
+    | Full v ->
+        Fun.const v
+    | List l ->
+        fun i -> List.nth l (List.hd i)
+
+  let get : type a b. (a, b) t -> int list -> (a, b) value =
+   fun t idx ->
+    match t with
+    | F32 (_, f) ->
+        F32 (calc_value f idx)
+    | I1 (_, b) ->
+        I1 (calc_value b idx)
+    | I64 (_, i) ->
+        I64 (calc_value i idx)
+
+  let shape : type a b. (a, b) t -> int list =
+   fun t ->
+    match t with
+    | F32 (shape, _) ->
+        shape
+    | I1 (shape, _) ->
+        shape
+    | I64 (shape, _) ->
+        shape
+
+  type 'a values = Tensor of 'a values Seq.t | Value of 'a
+
+  let values t =
+    let shape = shape t in
+    let rec values' shape acc =
+      match shape with
+      | [] ->
+          Value (get t acc)
+      | x :: xs ->
+          Tensor (Seq.init x (fun i -> values' xs (i :: acc)))
+    in
+    values' shape []
+
+  let to_string t =
+    let rec values_to_string = function
+      | Tensor s ->
+          "["
+          ^ (Seq.map values_to_string s |> List.of_seq |> String.concat ", ")
+          ^ "]"
+      | Value v ->
+          value_to_string v
+    in
+    let data = values_to_string (values t) in
+    let signature =
+      Stable_hlo.value_type_to_string
+        (value_type t |> ValueType.tensor_to_stable_hlo)
+    in
+    Printf.sprintf "dense<%s> : %s" data signature
+
+  let to_ir t =
+    let value_type = value_type t in
+    Var.Constant (value_type, t)
+
+  let from_int_list l = I64 ([List.length l], List l)
+
+  let from_float_list l = F32 ([List.length l], List l)
+
+  let scalar_f32 f = F32 ([], Full f)
 end
 
 let shape_of_var var =
@@ -556,7 +719,7 @@ let vars_to_ops vars =
               { inputs= []
               ; outputs= [output]
               ; name= "stablehlo.constant"
-              ; attributes= [("value", repr)]
+              ; attributes= [("value", Tensor.to_string repr)]
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
@@ -633,12 +796,16 @@ let vars_to_ops vars =
               ; name= "stablehlo.broadcast_in_dim"
               ; attributes=
                   [ ( "broadcast_dimensions"
-                    , "array<i64: "
-                      ^ String.concat ","
-                          (List.init
-                             (List.length (shape_of_var var'))
-                             (fun i -> string_of_int (i + List.length new_dims)) )
-                      ^ ">" ) ]
+                    , let shape = shape_of_var var' in
+                      if List.is_empty shape then "array<i64>"
+                      else
+                        "array<i64: "
+                        ^ String.concat ","
+                            (List.init
+                               (List.length (shape_of_var var'))
+                               (fun i ->
+                                 string_of_int (i + List.length new_dims) ) )
+                        ^ ">" ) ]
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
