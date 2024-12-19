@@ -1,9 +1,9 @@
 open Iree_bindings
 open Dsl
 
-let sigmoid x = ones_like x / (ones_like x + exp (zeros_like x - x))
+let sigmoid x = 1.0 /.< (1.0 +.< exp (1.0 -.< x))
 
-let tanh x = (exp x - exp (zeros_like x - x)) / (exp x + exp (zeros_like x - x))
+let tanh x = (exp x -@ exp (0.0 -.< x)) /@ (exp x +@ exp (0.0 -.< x))
 
 let batch_size = 32
 
@@ -11,7 +11,7 @@ let reparametrize mean var shape =
   let eps =
     norm (zeros (Tensor_type ([], F32))) (ones (Tensor_type ([], F32))) shape
   in
-  mean + (eps * var)
+  mean +@ (eps *@ var)
 
 let dense ?(activation = sigmoid) in_dims out_dims x =
   let open Parameters in
@@ -25,7 +25,7 @@ let dense ?(activation = sigmoid) in_dims out_dims x =
   let b_var = Ir.Var.BroadcastInDim (b_var, [batch_size]) in
   let w = reparametrize w_mean w_var [batch_size; in_dims; out_dims] in
   let b = reparametrize b_mean b_var [batch_size; 1; out_dims] in
-  return @@ activation (matmul x w + b)
+  return @@ activation (matmul x w +@ b)
 
 let embedding_dim = 16
 
@@ -44,10 +44,9 @@ let decoder z =
 
 let kl mean logvar =
   sum 0 @@ sum 0 @@ Dsl.mean 0
-  @@ full_like (F32 ~-.0.5) mean
-     * (ones_like mean + logvar - (mean * mean) - exp logvar)
+  @@ (-0.5 *.< (1.0 +.< logvar -@ (mean *@ mean) -@ exp logvar))
 
-let mse x x' = sum 0 @@ sum 0 @@ mean 0 ((x - x') * (x - x'))
+let mse x x' = sum 0 @@ sum 0 @@ mean 0 ((x -@ x') *@ (x -@ x'))
 
 let vae x =
   let open Parameters in
@@ -56,9 +55,11 @@ let vae x =
   let* x' = decoder z in
   let kl = kl mean' logvar in
   let mse = mse x x' in
-  return (mse + kl)
+  return (mse +@ kl)
 
-let optim = Optim.sgd 0.000001
+(* let optim = Optim.sgd 0.000001 *)
+
+let optim = Optim.adamw ?lr:(Some 0.0001)
 
 let train x = optim (vae x)
 

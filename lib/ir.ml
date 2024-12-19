@@ -433,7 +433,7 @@ end = struct
    fun v ->
     match v with
     | F32 f ->
-        Printf.sprintf "%f10" f
+        Printf.sprintf "%e" f
     | I1 b ->
         string_of_bool b
     | I64 i ->

@@ -1,4 +1,6 @@
 (* (input_type, old_output_type, list end, output list) *)
+open Dsl
+
 type (_, _, _, _) input =
   | Var : ('a, 'b, 'c, 'a Ir.Var.t -> 'c) input
   | Const : ('a, 'b, 'c, 'c) input
@@ -27,7 +29,7 @@ let diff :
    fun x y ->
     match (x, y) with
     | Some x, Some y ->
-        Some Dsl.(x + y)
+        Some (x +@ y)
     | Some x, None | None, Some x ->
         Some x
     | None, None ->
@@ -41,11 +43,11 @@ let diff :
    fun x y ->
     match (x, y) with
     | Some x, Some y ->
-        Some Dsl.(x - y)
+        Some (x -@ y)
     | Some x, None ->
         Some x
     | None, Some x ->
-        Some Dsl.(zeros_like x - x)
+        Some (zeros_like x -@ x)
     | None, None ->
         None
   in
@@ -58,17 +60,17 @@ let diff :
     | Subtract (v1, v2) ->
         opt_sub (backprop v1 grad x) (backprop v2 grad x)
     | Multiply (v1, v2) ->
-        opt_add (backprop v2 Dsl.(v1 * grad) x) (backprop v1 Dsl.(v2 * grad) x)
+        opt_add (backprop v2 (v1 *@ grad) x) (backprop v1 (v2 *@ grad) x)
     | Abs v ->
-        Option.map Dsl.abs (backprop v grad x) (* TODO: This is wrong *)
+        Option.map abs (backprop v grad x) (* TODO: This is wrong *)
     | Ln v ->
-        Option.map Dsl.(fun grad -> grad / v) (backprop v grad x)
+        Option.map (fun grad -> grad /@ v) (backprop v grad x)
     | Exponential v ->
-        backprop v Dsl.(grad * Exponential v) x
+        backprop v (grad *@ Exponential v) x
     | Pow (v1, v2) ->
         opt_add
-          (backprop v1 Dsl.(grad * v * v1 / v2) x)
-          (backprop v2 Dsl.(grad * v * ln v1) x)
+          (backprop v1 (grad *@ v *@ v1 /@ v2) x)
+          (backprop v2 (grad *@ v *@ ln v1) x)
     | Argument _ ->
         None
     | Compare _ ->
@@ -171,8 +173,8 @@ let diff :
         None
     | Divide (v1, v2) ->
         opt_add
-          (backprop v1 Dsl.(grad / v2) x)
-          (backprop v2 Dsl.(grad * (Dsl.zeros_like v1 - v1) / (v2 * v2)) x)
+          (backprop v1 (grad /@ v2) x)
+          (backprop v2 (grad *@ (Dsl.zeros_like v1 -@ v1) /@ (v2 *@ v2)) x)
     | BroadcastInDim (var, dims) ->
         let reduced_grad =
           List.fold_left (Fun.flip Dsl.sum) grad

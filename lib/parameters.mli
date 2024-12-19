@@ -1,33 +1,25 @@
-type ('a, 'b) t
+type ('a, 'b, 'c) t
 
-val return : 'a Ir.Var.t -> (unit, 'a) t
+val return : 'a Ir.Var.t -> ('b, 'b, 'a) t
 
-val bind :
-     ('c, 'd) t
-  -> ('d Ir.Var.t -> ('a, 'b) t)
-  -> ('a Ir.VarList.t Ir.Var.t -> 'c, 'b) t
+val bind : ('a, 'b, 'c) t -> ('c Ir.Var.t -> ('b, 'd, 'e) t) -> ('a, 'd, 'e) t
 
 val ( let* ) :
-     ('c, 'd) t
-  -> ('d Ir.Var.t -> ('a, 'b) t)
-  -> ('a Ir.VarList.t Ir.Var.t -> 'c, 'b) t
+  ('a, 'b, 'c) t -> ('c Ir.Var.t -> ('b, 'd, 'e) t) -> ('a, 'd, 'e) t
 
-val new_param :
-  'a Ir.tensor Ir.ValueType.t -> ('a Ir.tensor Ir.Var.t -> unit, 'a Ir.tensor) t
+val new_param : 'a Ir.ValueType.t -> ('b, 'a Ir.Var.t -> 'b, 'a) t
+
+val to_fun : (unit, 'a, 'b) t -> 'a Ir.VarList.t Ir.Var.t -> 'b Ir.Var.t
 
 val grad_and_value :
-     ('a, 'b) t
-  -> ( 'a
-     , (   'a Ir.VarList.t Ir.Var.t
-        -> 'a Ir.VarList.t Ir.Var.t
-        -> 'b Ir.Var.t
-        -> unit )
-       Ir.VarList.t )
-     t
+     ('a, 'b, 'c) t
+  -> ('a, 'b, ('b Ir.VarList.t Ir.Var.t -> 'c Ir.Var.t -> unit) Ir.VarList.t) t
+
+val params : ('a, 'a, 'a Ir.VarList.t) t
 
 val create_func :
      'a Ir.ValueType.t
-  -> ('a Ir.Var.t -> ('b, 'c) t)
-  -> ( ('a Ir.Var.t -> 'b Ir.VarList.t Ir.Var.t -> unit) Ir.VarList.t
+  -> ('a Ir.Var.t -> (unit, 'b, 'c) t)
+  -> ( ('b Ir.VarList.t Ir.Var.t -> 'a Ir.Var.t -> unit) Ir.VarList.t
      , 'c )
      Ir.Func.t

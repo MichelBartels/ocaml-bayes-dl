@@ -35,17 +35,19 @@ let matmul a b =
     , batching_dims
     , batching_dims )
 
-let ( + ) a b = Var.Add (a, b)
+let ( +@ ) a b = Var.Add (a, b)
 
-let ( - ) a b = Var.Subtract (a, b)
+let ( -@ ) a b = Var.Subtract (a, b)
 
-let ( * ) a b = Var.Multiply (a, b)
+let ( *@ ) a b = Var.Multiply (a, b)
 
-let ( / ) a b = Var.Divide (a, b)
+let ( /@ ) a b = Var.Divide (a, b)
 
 let exp a = Var.Exponential a
 
 let pow a b = Var.Pow (a, b)
+
+let ( **@ ) = pow
 
 let abs a = Var.Abs a
 
@@ -57,17 +59,21 @@ let min a b = Var.Min (a, b)
 
 let max a b = Var.Max (a, b)
 
-let ( = ) a = compare Ir.Eq a
+let ( =@ ) a = compare Ir.Eq a
 
-let ( <> ) a = compare Ir.Ne a
+let ( <>@ ) a = compare Ir.Ne a
 
-let ( >= ) a = compare Ir.Ge a
+let ( >=@ ) a = compare Ir.Ge a
 
-let ( > ) a = compare Ir.Gt a
+let ( >@ ) a = compare Ir.Gt a
 
-let ( <= ) a = compare Ir.Le a
+let ( <=@ ) a = compare Ir.Le a
 
-let ( < ) a = compare Ir.Lt a
+let ( <@ ) a = compare Ir.Lt a
+
+let broadcast_scalar op shape = Ir.Var.BroadcastInDim (op, shape)
+
+let broadcast_scalar_like op var = broadcast_scalar op (Ir.shape_of_var var)
 
 let full value shape =
   Ir.Var.BroadcastInDim (Ir.Tensor.full value [] |> Ir.Tensor.to_ir, shape)
@@ -77,6 +83,26 @@ let full_f32 value = full (F32 value)
 let full_i1 value = full (I1 value)
 
 let full_like value var = Ir.shape_of_var var |> full value
+
+let var_float_op op a b = op a (full_like (F32 b) a)
+
+let float_var_op op a b = op (full_like (F32 a) b) b
+
+let ( +.> ) = var_float_op ( +@ )
+
+let ( -.> ) = var_float_op ( -@ )
+
+let ( *.> ) = var_float_op ( *@ )
+
+let ( /.> ) = var_float_op ( /@ )
+
+let ( +.< ) = float_var_op ( +@ )
+
+let ( -.< ) = float_var_op ( -@ )
+
+let ( *.< ) = float_var_op ( *@ )
+
+let ( /.< ) = float_var_op ( /@ )
 
 let sqrt a = pow a @@ full_like (F32 0.5) a
 
@@ -140,6 +166,37 @@ let transpose var permutation =
   then failwith "Invalid permutation" ;
   Var.Transpose (var, permutation)
 
-let ( @. ) = Fun.compose
-
 let scalar_f32 = Fun.compose Ir.Tensor.to_ir Ir.Tensor.scalar_f32
+
+let assert_float_fn (f : Ir.f32 Ir.tensor Ir.Var.t -> Ir.f32 Ir.tensor Ir.Var.t)
+    : Ir.Var.map_fn =
+  let fn : type a. a Ir.tensor Ir.Var.t -> a Ir.tensor Ir.Var.t =
+   fun x ->
+    match Ir.ValueType.of_var x with
+    | Ir.ValueType.Tensor_type (_, F32) ->
+        f x
+    | _ ->
+        failwith "assert_float_map: unsupported type"
+  in
+  {fn}
+
+let assert_float2_fn
+    (f :
+         Ir.f32 Ir.tensor Ir.Var.t
+      -> Ir.f32 Ir.tensor Ir.Var.t
+      -> Ir.f32 Ir.tensor Ir.Var.t ) : Ir.Var.map2_fn =
+  let fn :
+      type a.
+      a Ir.tensor Ir.Var.t -> a Ir.tensor Ir.Var.t -> a Ir.tensor Ir.Var.t =
+   fun x y ->
+    match Ir.ValueType.of_var x with
+    | Ir.ValueType.Tensor_type (_, F32) ->
+        f x y
+    | _ ->
+        failwith "assert_float_map: unsupported type"
+  in
+  {fn}
+
+let float_map f = Ir.Var.map (assert_float_fn f)
+
+let float_map2 f = Ir.Var.map2 (assert_float2_fn f)
