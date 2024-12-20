@@ -14,7 +14,7 @@ let reparametrize mean var shape =
   mean +@ (eps *@ var)
 
 let kl mean logvar var =
-  sum 0 @@ sum 0 @@ Dsl.mean 0
+  sum 0 @@ Dsl.mean 0 @@ Dsl.mean 0
   @@ (-0.5 *.< (1.0 +.< logvar -@ (mean *@ mean) -@ var))
 
 let bayesian_parameter shape =
