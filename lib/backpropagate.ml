@@ -64,7 +64,7 @@ let diff :
     | Abs v ->
         Option.map abs (backprop v grad x) (* TODO: This is wrong *)
     | Ln v ->
-        Option.map (fun grad -> grad /@ v) (backprop v grad x)
+        backprop v (grad /@ v) x
     | Exponential v ->
         backprop v (grad *@ Exponential v) x
     | Pow (v1, v2) ->
