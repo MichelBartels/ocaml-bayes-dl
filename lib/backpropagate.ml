@@ -175,18 +175,50 @@ let diff :
         opt_add
           (backprop v1 (grad /@ v2) x)
           (backprop v2 (grad *@ (Dsl.zeros_like v1 -@ v1) /@ (v2 *@ v2)) x)
-    | BroadcastInDim (var, dims) ->
-        let reduced_grad =
-          List.fold_left (Fun.flip Dsl.sum) grad
-            (List.init (List.length dims) (Fun.const 0))
-        in
-        backprop var reduced_grad x
+    | BroadcastInDim (var, dims) -> (
+      match Ir.ValueType.of_var var with
+      | Ir.ValueType.Tensor_type (_, Ir.F32) ->
+          let reduced_grad =
+            Dsl.sum (List.init (List.length dims) Fun.id) grad
+          in
+          backprop var reduced_grad x
+      | _ ->
+          failwith "broadcasting only supported for f32 tensors" )
     | Transpose (var, permutation) ->
         let inverse_permutation =
           List.init (List.length permutation) (fun i ->
               List.find_index (fun x -> x = i) permutation |> Option.get )
         in
         backprop var (Ir.Var.Transpose (grad, inverse_permutation)) x
+    | Tanh var ->
+        backprop var (grad *@ (Dsl.ones_like var -@ (tanh var *@ tanh var))) x
+        (* Jax uses different backpropagation that is more numerically precise, but also slower *)
+    | Sum (var, dimensions) ->
+        let var_shape = Ir.shape_of_var var in
+        let new_dims =
+          List.filteri (fun i _ -> List.mem i dimensions) var_shape
+        in
+        let new_grad = Ir.Var.BroadcastInDim (grad, new_dims) in
+        let new_dims =
+          List.init (List.length var_shape) Fun.id
+          |> List.filteri (fun i _ -> List.mem i dimensions)
+        in
+        let old_dims =
+          List.init (List.length var_shape) Fun.id
+          |> List.filteri (fun i _ -> not (List.mem i dimensions))
+        in
+        let perm =
+          List.init (List.length var_shape) Fun.id
+          |> List.map (fun i ->
+                 match List.find_index (( = ) i) new_dims with
+                 | Some j ->
+                     j
+                 | None ->
+                     (List.find_index (( = ) i) old_dims |> Option.get)
+                     + List.length new_dims )
+        in
+        let new_grad = Ir.Var.Transpose (new_grad, perm) in
+        backprop var new_grad x
   in
   let rec wrap_inputs :
       type a b c d. (a, b, c, d) input -> a Ir.Var.t -> a Ir.Var.t =

@@ -1,10 +1,12 @@
 import jax.numpy as jnp
-from jax import value_and_grad, jit, random
+from jax import value_and_grad, jit, random, export, ShapeDtypeStruct
 import numpy as np
 from mnist import mnist, batch_size
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 from optax import adamw, sgd, apply_updates
+from optax._src.transform import ScaleByAdamState
+from optax._src.base import EmptyState
 
 def init(shape):
     return (np.zeros(shape=shape).astype(np.float32),
@@ -33,7 +35,8 @@ def tanh(x):
 
 def reparameterize(seed, mean, std, add_batch=True):
     key_1, key_2 = random.split(seed)
-    eps = random.normal(key_1, [batch_size, *mean.shape] if add_batch else mean.shape)
+    #eps = random.normal(key_1, [batch_size, *mean.shape] if add_batch else mean.shape)
+    eps = np.zeros([batch_size, *mean.shape]) if add_batch else np.zeros(mean.shape)
     return key_2, mean + std * eps
 
 def encoder(seed, x, w1_encoder, b1_encoder, w2_encoder, b2_encoder, w3_encoder, b3_encoder):
@@ -103,7 +106,12 @@ bar = tqdm(zip(range(num_steps), mnist()), total=num_steps)
 for i, (x, _) in bar:
     seed = random.key(i)
     if i == 0:
-        print(optim.lower(seed, params, x).as_text())
+        #input_shapes = [ShapeDtypeStruct(seed.shape, seed.dtype)] + [ShapeDtypeStruct(x.shape, x.dtype) for x in params] + [ShapeDtypeStruct(x.shape, x.dtype)]
+        export.register_namedtuple_serialization(ScaleByAdamState, serialized_name="ScaleByAdamState")
+        export.register_namedtuple_serialization(EmptyState, serialized_name="EmptyState")
+        stable_hlo = export.export(optim)(seed, params, x).mlir_module_serialized
+        with open("train.mlir", "wb") as f:
+            f.write(stable_hlo)
     params, loss = optim(seed, params, x)
     bar.set_description(f"Loss: {loss}")
     if (i + 1) % 2500 == 0:

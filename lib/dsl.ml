@@ -106,6 +106,8 @@ let ( /.< ) = float_var_op ( /@ )
 
 let sqrt a = pow a @@ full_like (F32 0.5) a
 
+let tanh a = Var.Tanh a
+
 let ones : type a. a Ir.tensor Ir.ValueType.t -> a Ir.tensor Ir.Var.t = function
   | Tensor_type (shape, F32) ->
       full (F32 1.) shape
@@ -143,17 +145,14 @@ let uniform low high shape =
     , Ir.Tensor.from_int_list shape |> Ir.Tensor.to_ir
     , Uniform )
 
-let sum axis x =
-  let (Tensor_type (shape, t)) = Ir.ValueType.of_var x in
-  let size = List.nth shape axis in
-  let ones = ones (Tensor_type ([size], t)) in
-  Var.DotProduct (x, ones, [axis], [0], [], [])
+let sum axes x = Var.Sum (x, axes)
 
-let mean axis x =
+let mean axes x =
   let (Tensor_type (shape, _)) = Ir.ValueType.of_var x in
-  let size = List.nth shape axis in
-  let fact = full_f32 (1.0 /. float_of_int size) [size] in
-  Var.DotProduct (x, fact, [axis], [0], [], [])
+  let size =
+    List.filteri (fun i _ -> List.mem i axes) shape |> List.fold_left ( * ) 1
+  in
+  sum axes x /.> float_of_int size
 
 let transpose var permutation =
   let shape = Ir.shape_of_var var in

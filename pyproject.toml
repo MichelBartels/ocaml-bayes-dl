@@ -1,0 +1,17 @@
+[project]
+name = "ocaml-iree"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "absl-py>=2.1.0",
+    "flatbuffers>=24.3.25",
+    "iree-base-compiler>=3.0.0",
+    "iree-base-runtime>=3.0.0",
+    "jax[cuda12]>=0.4.38",
+    "matplotlib>=3.10.0",
+    "optax>=0.2.4",
+    "torchvision>=0.20.1",
+    "tqdm>=4.67.1",
+]

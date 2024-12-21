@@ -1,9 +1,9 @@
 open Iree_bindings
 open Dsl
 
-let sigmoid x = 1.0 /.< (1.0 +.< exp (1.0 -.< x))
+(* let tanh x = (exp x -@ exp (0.0 -.< x)) /@ (exp x +@ exp (0.0 -.< x)) *)
 
-let tanh x = (exp x -@ exp (0.0 -.< x)) /@ (exp x +@ exp (0.0 -.< x))
+let sigmoid x = (tanh (x /.> 2.0) +.> 1.0) /.> 2.0
 
 let batch_size = 32
 
@@ -14,7 +14,8 @@ let reparametrize mean var shape =
   mean +@ (eps *@ var)
 
 let kl mean logvar var =
-  sum 0 @@ Dsl.mean 0 @@ Dsl.mean 0
+  sum [0]
+  @@ Dsl.mean [0; 1]
   @@ (-0.5 *.< (1.0 +.< logvar -@ (mean *@ mean) -@ var))
 
 let bayesian_parameter shape =
@@ -47,7 +48,7 @@ let decoder z =
   let* [z; z'_loss] = dense 512 784 z in
   return [z; z_loss +@ z'_loss]
 
-let mse x x' = sum 0 @@ sum 0 @@ mean 0 ((x -@ x') *@ (x -@ x'))
+let mse x x' = sum [0; 1] @@ mean [0] ((x -@ x') *@ (x -@ x'))
 
 let vae x =
   let open Parameters in

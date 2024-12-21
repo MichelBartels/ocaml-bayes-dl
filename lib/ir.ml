@@ -83,6 +83,8 @@ module rec Var : sig
     | DiffConst : 'a tensor t -> 'a tensor t
     | BroadcastInDim : 'a tensor t * int list -> 'a tensor t
     | Transpose : 'a tensor t * int list -> 'a tensor t
+    | Tanh : 'a tensor t -> 'a tensor t
+    | Sum : f32 tensor t * int list -> f32 tensor t
 
   val to_var_list : 'a VarList.t t -> 'a VarList.t
 
@@ -138,6 +140,8 @@ end = struct
     | DiffConst : 'a tensor t -> 'a tensor t
     | BroadcastInDim : 'a tensor t * int list -> 'a tensor t
     | Transpose : 'a tensor t * int list -> 'a tensor t
+    | Tanh : 'a tensor t -> 'a tensor t
+    | Sum : f32 tensor t * int list -> f32 tensor t
 
   let rec to_var_list : type a. a VarList.t t -> a VarList.t = function
     | [] ->
@@ -231,6 +235,10 @@ end = struct
     | (DiffConst _ as a), b ->
         fn a b acc
     | (BroadcastInDim _ as a), b ->
+        fn a b acc
+    | (Tanh _ as a), b ->
+        fn a b acc
+    | (Sum _ as a), b ->
         fn a b acc
 
   let map2 ({fn} : map2_fn) a b =
@@ -353,6 +361,14 @@ end = struct
         let (Tensor_type (shape, element_type)) = of_var var in
         let new_shape = List.map (fun i -> List.nth shape i) permutation in
         Tensor_type (new_shape, element_type)
+    | Tanh var ->
+        of_var var
+    | Sum (var, dimension) ->
+        let (Tensor_type (shape, _)) = of_var var in
+        let new_shape =
+          List.filteri (fun i _ -> not (List.mem i dimension)) shape
+        in
+        Tensor_type (new_shape, F32)
 
   let rec to_arg : type a. a t -> a Var.t = function
     | Tensor_type _ as t ->
@@ -580,6 +596,7 @@ let vars_to_ops vars =
               ; outputs= [output]
               ; name= "stablehlo.add"
               ; attributes= []
+              ; anonymous_functions= []
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
@@ -593,6 +610,7 @@ let vars_to_ops vars =
               ; outputs= [output]
               ; name= "stablehlo.subtract"
               ; attributes= []
+              ; anonymous_functions= []
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
@@ -606,6 +624,7 @@ let vars_to_ops vars =
               ; outputs= [output]
               ; name= "stablehlo.multiply"
               ; attributes= []
+              ; anonymous_functions= []
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
@@ -619,6 +638,7 @@ let vars_to_ops vars =
               ; outputs= [output]
               ; name= "stablehlo.divide"
               ; attributes= []
+              ; anonymous_functions= []
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
@@ -631,6 +651,7 @@ let vars_to_ops vars =
               ; outputs= [output]
               ; name= "stablehlo.abs"
               ; attributes= []
+              ; anonymous_functions= []
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
@@ -643,6 +664,7 @@ let vars_to_ops vars =
               ; outputs= [output]
               ; name= "stablehlo.log"
               ; attributes= []
+              ; anonymous_functions= []
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
@@ -655,6 +677,7 @@ let vars_to_ops vars =
               ; outputs= [output]
               ; name= "stablehlo.exponential"
               ; attributes= []
+              ; anonymous_functions= []
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
@@ -668,6 +691,7 @@ let vars_to_ops vars =
               ; outputs= [output]
               ; name= "stablehlo.power"
               ; attributes= []
+              ; anonymous_functions= []
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
@@ -683,6 +707,7 @@ let vars_to_ops vars =
               ; outputs= [output]
               ; name= "stablehlo.compare"
               ; attributes= [attribute_of_comparison_direction direction]
+              ; anonymous_functions= []
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
@@ -696,6 +721,7 @@ let vars_to_ops vars =
               ; outputs= [output]
               ; name= "stablehlo.minimum"
               ; attributes= []
+              ; anonymous_functions= []
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
@@ -709,6 +735,7 @@ let vars_to_ops vars =
               ; outputs= [output]
               ; name= "stablehlo.maximum"
               ; attributes= []
+              ; anonymous_functions= []
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
@@ -720,6 +747,7 @@ let vars_to_ops vars =
               ; outputs= [output]
               ; name= "stablehlo.constant"
               ; attributes= [("value", Tensor.to_string repr)]
+              ; anonymous_functions= []
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
@@ -752,6 +780,7 @@ let vars_to_ops vars =
                       ^ ",\nrhs_contracting_dimensions = "
                       ^ dims_to_string rhs_contracting_dims
                       ^ "\n>" ) ]
+              ; anonymous_functions= []
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
@@ -774,6 +803,7 @@ let vars_to_ops vars =
                         | Normal ->
                             "NORMAL" )
                       ^ ">" ) ]
+              ; anonymous_functions= []
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
@@ -806,6 +836,7 @@ let vars_to_ops vars =
                                (fun i ->
                                  string_of_int (i + List.length new_dims) ) )
                         ^ ">" ) ]
+              ; anonymous_functions= []
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
@@ -828,9 +859,62 @@ let vars_to_ops vars =
                       , "array<i64: "
                         ^ String.concat "," (List.map string_of_int permutation)
                         ^ ">" ) ]
+                ; anonymous_functions= []
                 ; call= false }
             in
             (output :: prev_outputs, add var (Some op, output) cache)
+      | Tanh var' ->
+          let var', cache = aux ([], cache) var' in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= var'
+              ; outputs= [output]
+              ; name= "stablehlo.tanh"
+              ; attributes= []
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | Sum (var', dimensions) ->
+          let var', cache = aux ([], cache) var' in
+          let initial, cache =
+            aux ([], cache)
+              (Constant (Tensor_type ([], F32), Tensor.scalar_f32 0.0))
+          in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= var' @ initial
+              ; outputs= [output]
+              ; name= "stablehlo.reduce"
+              ; attributes=
+                  [ ( "dimensions"
+                    , "array<i64: "
+                      ^ String.concat "," (List.map string_of_int dimensions)
+                      ^ ">" ) ]
+              ; anonymous_functions=
+                  (let scalar_type = Tensor_type ([], F32) in
+                   [ Stable_hlo.
+                       { id= "sum"
+                       ; inputs= [("x", scalar_type); ("y", scalar_type)]
+                       ; outputs= [scalar_type]
+                       ; body=
+                           [ { inputs= [("x", scalar_type); ("y", scalar_type)]
+                             ; outputs= [("z", scalar_type)]
+                             ; name= "stablehlo.add"
+                             ; attributes= []
+                             ; anonymous_functions= []
+                             ; call= false }
+                           ; { inputs= [("z", scalar_type)]
+                             ; outputs= []
+                             ; name= "stablehlo.return"
+                             ; attributes= []
+                             ; anonymous_functions= []
+                             ; call= false } ] } ] )
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
   in
   let outputs, cache = aux ([], VarMap.empty) vars in
   (outputs, VarMap.bindings cache |> List.map snd |> List.map fst |> List.rev)
@@ -839,8 +923,9 @@ let annotated_values_to_return_op values =
   Stable_hlo.
     { inputs= values
     ; outputs= []
-    ; name= "func.return"
+    ; name= "stablehlo.return"
     ; attributes= []
+    ; anonymous_functions= []
     ; call= false }
 
 let create_func :
@@ -911,6 +996,10 @@ let compile entry =
     | BroadcastInDim (var, _) ->
         all_funcs cache var
     | Transpose (var, _) ->
+        all_funcs cache var
+    | Tanh var ->
+        all_funcs cache var
+    | Sum (var, _) ->
         all_funcs cache var
   in
   let main = func_to_stable_hlo entry |> Stable_hlo.func_to_string in
