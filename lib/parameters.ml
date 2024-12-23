@@ -1,55 +1,71 @@
-type ('a, 'b, 'c, 'd, 'e) t =
-  ('a Ir.VarList.t Ir.Var.t -> 'b Ir.Var.t)
-  * 'a Ir.VarList.t Ir.ValueType.t
-  * ('a Ir.VarList.t, 'e, 'c, 'd) Backpropagate.input
+type ('a, 'b, 'c) inner =
+  { new_param_types: 'b Ir.VarList.t Ir.ValueType.t
+  ; output_type: 'c Ir.ValueType.t
+  ; old_params: 'b Ir.VarList.t Ir.Var.t -> 'a Ir.VarList.t Ir.Var.t
+  ; f: 'b Ir.VarList.t Ir.Var.t -> 'c Ir.Var.t }
 
-let return :
-    type a b c. a Ir.Var.t -> (unit, a, b, unit Ir.VarList.t Ir.Var.t -> b, c) t
-    =
- fun x -> ((fun _ -> x), List_type [], [])
+type ('a, 'b, 'c) t = 'a Ir.VarList.t Ir.ValueType.t -> ('a, 'b, 'c) inner
+
+let return : type a b. a Ir.Var.t -> (b, b, a) t =
+ fun x arg_types ->
+  { new_param_types= arg_types
+  ; old_params= Fun.id
+  ; output_type= Ir.ValueType.of_var x
+  ; f= (fun _ -> x) }
 
 let bind :
-    type a b c d e f g h.
-       (f, g, h, c Ir.VarList.t Ir.Var.t -> h, e) t
-    -> (g Ir.Var.t -> (a, b, c, d, e) t)
-    -> (a Ir.VarList.t Ir.Var.t -> f, b, h, d Ir.VarList.t Ir.Var.t -> h, e) t =
- fun (f, List_type t, b) g ->
-  let _, t', b' = g (f (Ir.ValueType.to_arg (List_type t))) in
-  ( (fun (x :: xs) ->
-      let y = f xs in
-      let z, _, _ = g y in
-      z x )
-  , List_type (t' :: t)
-  , b' :: b )
+    type a b c d e. (a, b, c) t -> (c Ir.Var.t -> (b, d, e) t) -> (a, d, e) t =
+ fun x f arg_types ->
+  let dummy_output = f (Ir.ValueType.to_arg (x arg_types).output_type) in
+  let dummy_inner = dummy_output (x arg_types).new_param_types in
+  { dummy_inner with
+    f=
+      (fun z ->
+        let b_param = dummy_inner.old_params z in
+        let a_param = (x arg_types).old_params b_param in
+        let x_inner = x @@ Ir.ValueType.of_var a_param in
+        let c = x_inner.f b_param in
+        let output = f c in
+        let output_inner = output @@ Ir.ValueType.of_var b_param in
+        output_inner.f z )
+  ; old_params=
+      (fun z ->
+        let b_param = dummy_inner.old_params z in
+        (x arg_types).old_params b_param ) }
 
 let ( let* ) = bind
 
-let new_param :
+let new_param : type a b. a Ir.ValueType.t -> (b, a Ir.Var.t -> b, a) t =
+ fun t (List_type xs) ->
+  { new_param_types= List_type (t :: xs)
+  ; old_params= (fun (_ :: xs) -> xs)
+  ; output_type= t
+  ; f= (fun (x :: _) -> x) }
+
+let to_fun : type a b. (unit, a, b) t -> a Ir.VarList.t Ir.Var.t -> b Ir.Var.t =
+ fun x -> (x (List_type [])).f
+
+let grad_and_value :
     type a b c.
-       a Ir.tensor Ir.ValueType.t
-    -> ( a Ir.tensor Ir.Var.t -> unit
-       , a Ir.tensor
-       , b
-       , (c Ir.Var.t -> unit) Ir.VarList.t Ir.Var.t -> b
-       , c )
-       t =
- fun t -> ((fun [x] -> x), List_type [t], [Var])
+       (a, b, c) t
+    -> (a, b, (b Ir.VarList.t Ir.Var.t -> c Ir.Var.t -> unit) Ir.VarList.t) t =
+ fun x arg_type ->
+  let x = x arg_type in
+  { x with
+    output_type= List_type [x.new_param_types; x.output_type]
+  ; f= Backpropagate.diff Var x.f }
 
-let grad_and_value (f, t, b) =
-  ((fun p -> Ir.Var.(p :: Backpropagate.diff b f p)), t, b)
+let params : type a. (a, a, a Ir.VarList.t) t =
+ fun arg_type ->
+  { new_param_types= arg_type
+  ; old_params= Fun.id
+  ; output_type= arg_type
+  ; f= Fun.id }
 
-let create_func :
-    type a b c d e f.
-       a Ir.ValueType.t
-    -> (a Ir.Var.t -> (b, c, d, e, f) t)
-    -> ( (a Ir.Var.t -> b Ir.VarList.t Ir.Var.t -> unit) Ir.VarList.t
-       , c )
-       Ir.Func.t =
- fun t f ->
-  let args = Ir.ValueType.to_arg t in
-  let _, t', _ = f args in
-  Ir.create_func
-    (List_type [t; t'])
-    (fun [x; y] ->
-      let f, _, _ = f x in
-      f y )
+let create_func t f =
+  let dummy_x = Ir.ValueType.to_arg t in
+  let dummy_inner = f dummy_x (Ir.ValueType.List_type []) in
+  let input_types = Ir.ValueType.List_type [dummy_inner.new_param_types; t] in
+  Ir.create_func input_types (fun [params; x] ->
+      let inner = f x (List_type []) in
+      inner.f params )

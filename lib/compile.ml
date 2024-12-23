@@ -52,7 +52,7 @@ let ( let& ) (x, destructor) f =
 let compile str file =
   global_initialize () ;
   let& session = (session_create () |> Option.get, session_destroy) in
-  set_hal_target session "llvm-cpu" ;
+  set_hal_target session "cuda" ;
   let source = source_from_string session str in
   let output = create_output file in
   let& invocation = (create_invocation session, invocation_destroy) in

@@ -35,8 +35,7 @@ def tanh(x):
 
 def reparameterize(seed, mean, std, add_batch=True):
     key_1, key_2 = random.split(seed)
-    #eps = random.normal(key_1, [batch_size, *mean.shape] if add_batch else mean.shape)
-    eps = np.zeros([batch_size, *mean.shape]) if add_batch else np.zeros(mean.shape)
+    eps = random.normal(key_1, [batch_size, *mean.shape] if add_batch else mean.shape)
     return key_2, mean + std * eps
 
 def encoder(seed, x, w1_encoder, b1_encoder, w2_encoder, b2_encoder, w3_encoder, b3_encoder):
