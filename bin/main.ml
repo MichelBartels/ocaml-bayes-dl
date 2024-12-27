@@ -24,6 +24,7 @@ let reparametrize mean var shape =
   let eps =
     norm (zeros (Tensor_type ([], F32))) (ones (Tensor_type ([], F32))) shape
   in
+  (* let eps = zeros (Tensor_type (shape, F32)) in *)
   mean +@ (eps *@ var)
 
 let kl mean logvar var =
