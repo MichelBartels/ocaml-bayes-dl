@@ -1,12 +1,18 @@
-type tensor_element_type = F32 | I1 | I64
+type tensor_element_type = F32 | F64 | I1 | I64 | U32 | U64
 
 let tensor_element_type_to_string = function
   | F32 ->
       "f32"
+  | F64 ->
+      "f64"
   | I1 ->
       "i1"
   | I64 ->
       "i64"
+  | U32 ->
+      "ui32"
+  | U64 ->
+      "ui64"
 
 type shape = int list
 

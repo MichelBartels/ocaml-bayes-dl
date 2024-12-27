@@ -20,6 +20,10 @@ val params : ('a, 'a, 'a Ir.VarList.t) t
 val create_func :
      'a Ir.ValueType.t
   -> ('a Ir.Var.t -> (unit, 'b, 'c) t)
-  -> ( ('b Ir.VarList.t Ir.Var.t -> 'a Ir.Var.t -> unit) Ir.VarList.t
-     , 'c )
+  -> ( (   'b Ir.VarList.t Ir.Var.t
+        -> 'a Ir.Var.t
+        -> Ir.u64 Ir.tensor Ir.Var.t
+        -> unit )
+       Ir.VarList.t
+     , ('c Ir.Var.t -> Ir.u64 Ir.tensor Ir.Var.t -> unit) Ir.VarList.t )
      Ir.Func.t

@@ -43,6 +43,12 @@ let ( *@ ) a b = Var.Multiply (a, b)
 
 let ( /@ ) a b = Var.Divide (a, b)
 
+let ( <<@ ) a b = Var.LeftShift (a, b)
+
+let ( >>@ ) a b = Var.RightShift (a, b)
+
+let ( |@ ) a b = Var.Or (a, b)
+
 let exp a = Var.Exponential a
 
 let pow a b = Var.Pow (a, b)
@@ -88,6 +94,10 @@ let var_float_op op a b = op a (full_like (F32 b) a)
 
 let float_var_op op a b = op (full_like (F32 a) b) b
 
+let var_u64_op op a b = op a (full_like (U64 b) a)
+
+let u64_var_op op a b = op (full_like (U64 a) b) b
+
 let ( +.> ) = var_float_op ( +@ )
 
 let ( -.> ) = var_float_op ( -@ )
@@ -95,6 +105,26 @@ let ( -.> ) = var_float_op ( -@ )
 let ( *.> ) = var_float_op ( *@ )
 
 let ( /.> ) = var_float_op ( /@ )
+
+let ( **.> ) = var_float_op ( **@ )
+
+let ( =.> ) = var_float_op ( =@ )
+
+let ( <>.> ) = var_float_op ( <>@ )
+
+let ( >=.> ) = var_float_op ( >=@ )
+
+let ( >.> ) = var_float_op ( >@ )
+
+let ( <=.> ) = var_float_op ( <=@ )
+
+let ( <.> ) = var_float_op ( <@ )
+
+let ( <<.> ) = var_u64_op ( <<@ )
+
+let ( >>.> ) = var_u64_op ( >>@ )
+
+let ( |.> ) = var_u64_op ( |@ )
 
 let ( +.< ) = float_var_op ( +@ )
 
@@ -104,17 +134,43 @@ let ( *.< ) = float_var_op ( *@ )
 
 let ( /.< ) = float_var_op ( /@ )
 
-let sqrt a = pow a @@ full_like (F32 0.5) a
+let ( **.< ) = float_var_op ( **@ )
+
+let ( =.< ) = float_var_op ( =@ )
+
+let ( <>.< ) = float_var_op ( <>@ )
+
+let ( >=.< ) = float_var_op ( >=@ )
+
+let ( >.< ) = float_var_op ( >@ )
+
+let ( <=.< ) = float_var_op ( <=@ )
+
+let ( <.< ) = float_var_op ( <@ )
+
+let ( <<.< ) = u64_var_op ( <<@ )
+
+let ( >>.< ) = u64_var_op ( >>@ )
+
+let ( |.< ) = u64_var_op ( |@ )
+
+let sqrt a = a **.> 0.5
 
 let tanh a = Var.Tanh a
 
 let ones : type a. a Ir.tensor Ir.ValueType.t -> a Ir.tensor Ir.Var.t = function
   | Tensor_type (shape, F32) ->
       full (F32 1.) shape
+  | Tensor_type (shape, F64) ->
+      full (F64 1.) shape
   | Tensor_type (shape, I1) ->
       full (I1 false) shape
   | Tensor_type (shape, I64) ->
       full (I64 1) shape
+  | Tensor_type (shape, U32) ->
+      full (U32 "1") shape
+  | Tensor_type (shape, U64) ->
+      full (U64 "1") shape
 
 let ones_like t = ones (Ir.ValueType.of_var t)
 
@@ -122,10 +178,16 @@ let zeros : type a. a Ir.tensor Ir.ValueType.t -> a Ir.tensor Ir.Var.t =
   function
   | Tensor_type (shape, F32) ->
       full (F32 0.) shape
+  | Tensor_type (shape, F64) ->
+      full (F64 0.) shape
   | Tensor_type (shape, I1) ->
       full (I1 false) shape
   | Tensor_type (shape, I64) ->
       full (I64 0) shape
+  | Tensor_type (shape, U32) ->
+      full (U32 "0") shape
+  | Tensor_type (shape, U64) ->
+      full (U64 "0") shape
 
 let zeros_like t = zeros (Ir.ValueType.of_var t)
 
@@ -167,6 +229,8 @@ let transpose var permutation =
 
 let scalar_f32 = Fun.compose Ir.Tensor.to_ir Ir.Tensor.scalar_f32
 
+let scalar_u64 = Fun.compose Ir.Tensor.to_ir Ir.Tensor.scalar_u64
+
 let assert_float_fn (f : Ir.f32 Ir.tensor Ir.Var.t -> Ir.f32 Ir.tensor Ir.Var.t)
     : Ir.Var.map_fn =
   let fn : type a. a Ir.tensor Ir.Var.t -> a Ir.tensor Ir.Var.t =
@@ -199,3 +263,17 @@ let assert_float2_fn
 let float_map f = Ir.Var.map (assert_float_fn f)
 
 let float_map2 f = Ir.Var.map2 (assert_float2_fn f)
+
+let bitcast dtype var = Var.Bitcast (var, dtype)
+
+let convert dtype var = Var.Convert (var, dtype)
+
+let iota n var = Var.Iota (n, var)
+
+let reshape shape var = Var.Reshape (var, shape)
+
+let no_grad x = Ir.Var.NoGrad x
+
+let sin x = Var.Sin x
+
+let cos x = Var.Cos x

@@ -15,7 +15,19 @@ type i1 = I1
 
 type i64 = I64
 
-type _ tensor = F32 : f32 tensor | I1 : i1 tensor | I64 : i64 tensor
+type u32 = U32
+
+type u64 = U64
+
+type f64 = F64
+
+type _ tensor =
+  | F32 : f32 tensor
+  | I1 : i1 tensor
+  | I64 : i64 tensor
+  | U32 : u32 tensor
+  | U64 : u64 tensor
+  | F64 : f64 tensor
 
 type shape = int list
 
@@ -27,6 +39,12 @@ let tensor_element_type_to_stable_hlo :
       Stable_hlo.I1
   | I64 ->
       Stable_hlo.I64
+  | U32 ->
+      Stable_hlo.U32
+  | U64 ->
+      Stable_hlo.U64
+  | F64 ->
+      Stable_hlo.F64
 
 type 'a tagged = id * 'a
 
@@ -85,6 +103,16 @@ module rec Var : sig
     | Transpose : 'a tensor t * int list -> 'a tensor t
     | Tanh : 'a tensor t -> 'a tensor t
     | Sum : f32 tensor t * int list -> f32 tensor t
+    | RightShift : u64 tensor t * u64 tensor t -> u64 tensor t
+    | LeftShift : u64 tensor t * u64 tensor t -> u64 tensor t
+    | Bitcast : 'a tensor t * 'b tensor -> 'b tensor t
+    | Convert : 'a tensor t * 'b tensor -> 'b tensor t
+    | NoGrad : 'a tensor t -> 'a tensor t
+    | Or : u64 tensor t * u64 tensor t -> u64 tensor t
+    | Iota : int * int list -> u64 tensor t
+    | Reshape : 'a tensor t * int list -> 'a tensor t
+    | Sin : 'a tensor t -> 'a tensor t
+    | Cos : 'a tensor t -> 'a tensor t
 
   val to_var_list : 'a VarList.t t -> 'a VarList.t
 
@@ -142,6 +170,16 @@ end = struct
     | Transpose : 'a tensor t * int list -> 'a tensor t
     | Tanh : 'a tensor t -> 'a tensor t
     | Sum : f32 tensor t * int list -> f32 tensor t
+    | RightShift : u64 tensor t * u64 tensor t -> u64 tensor t
+    | LeftShift : u64 tensor t * u64 tensor t -> u64 tensor t
+    | Bitcast : 'a tensor t * 'b tensor -> 'b tensor t
+    | Convert : 'a tensor t * 'b tensor -> 'b tensor t
+    | NoGrad : 'a tensor t -> 'a tensor t
+    | Or : u64 tensor t * u64 tensor t -> u64 tensor t
+    | Iota : int * int list -> u64 tensor t
+    | Reshape : 'a tensor t * int list -> 'a tensor t
+    | Sin : 'a tensor t -> 'a tensor t
+    | Cos : 'a tensor t -> 'a tensor t
 
   let rec to_var_list : type a. a VarList.t t -> a VarList.t = function
     | [] ->
@@ -239,6 +277,26 @@ end = struct
     | (Tanh _ as a), b ->
         fn a b acc
     | (Sum _ as a), b ->
+        fn a b acc
+    | (RightShift _ as a), b ->
+        fn a b acc
+    | (LeftShift _ as a), b ->
+        fn a b acc
+    | (Bitcast _ as a), b ->
+        fn a b acc
+    | (Convert _ as a), b ->
+        fn a b acc
+    | (NoGrad _ as a), b ->
+        fn a b acc
+    | (Or _ as a), b ->
+        fn a b acc
+    | (Iota _ as a), b ->
+        fn a b acc
+    | (Reshape _ as a), b ->
+        fn a b acc
+    | (Sin _ as a), b ->
+        fn a b acc
+    | (Cos _ as a), b ->
         fn a b acc
 
   let map2 ({fn} : map2_fn) a b =
@@ -369,6 +427,29 @@ end = struct
           List.filteri (fun i _ -> not (List.mem i dimension)) shape
         in
         Tensor_type (new_shape, F32)
+    | RightShift (lhs, _) ->
+        of_var lhs
+    | LeftShift (lhs, _) ->
+        of_var lhs
+    | Bitcast (var, new_type) ->
+        let (Tensor_type (shape, _)) = of_var var in
+        Tensor_type (shape, new_type)
+    | Convert (var, new_type) ->
+        let (Tensor_type (shape, _)) = of_var var in
+        Tensor_type (shape, new_type)
+    | NoGrad var ->
+        of_var var
+    | Or (lhs, _) ->
+        of_var lhs
+    | Iota (_, shape) ->
+        Tensor_type (shape, U64)
+    | Reshape (var, new_shape) ->
+        let (Tensor_type (_, element_type)) = of_var var in
+        Tensor_type (new_shape, element_type)
+    | Sin var ->
+        of_var var
+    | Cos var ->
+        of_var var
 
   let rec to_arg : type a. a t -> a Var.t = function
     | Tensor_type _ as t ->
@@ -413,8 +494,11 @@ and Tensor : sig
 
   type (_, _) value =
     | F32 : float -> (f32, float) value
+    | F64 : float -> (f64, float) value
     | I1 : bool -> (i1, bool) value
     | I64 : int -> (i64, int) value
+    | U32 : string -> (u32, string) value
+    | U64 : string -> (u64, string) value
 
   val full : ('a, 'b) value -> int list -> ('a, 'b) t
 
@@ -433,6 +517,8 @@ and Tensor : sig
   val from_float_list : float list -> (f32, float) t
 
   val scalar_f32 : float -> (f32, float) t
+
+  val scalar_u64 : string -> (u64, string) t
 end = struct
   type _ tensor_values =
     | Full : 'a -> 'a tensor_values
@@ -442,43 +528,63 @@ end = struct
 
   type (_, _) value =
     | F32 : float -> (f32, float) value
+    | F64 : float -> (f64, float) value
     | I1 : bool -> (i1, bool) value
     | I64 : int -> (i64, int) value
+    | U32 : string -> (u32, string) value
+    | U64 : string -> (u64, string) value
 
   let value_to_string : type a b. (a, b) value -> string =
    fun v ->
     match v with
-    | F32 f ->
+    | F32 f | F64 f ->
         Printf.sprintf "%e" f
     | I1 b ->
         string_of_bool b
     | I64 i ->
         string_of_int i
+    | U32 i | U64 i ->
+        i
 
   type (_, _) t =
     | F32 : (f32, float) generic_tensor -> (f32, float) t
+    | F64 : (f64, float) generic_tensor -> (f64, float) t
     | I1 : (i1, bool) generic_tensor -> (i1, bool) t
     | I64 : (i64, int) generic_tensor -> (i64, int) t
+    | U32 : (u32, string) generic_tensor -> (u32, string) t
+    | U64 : (u64, string) generic_tensor -> (u64, string) t
 
   let full : type a b. (a, b) value -> int list -> (a, b) t =
    fun value shape ->
     match value with
     | F32 f ->
         F32 (shape, Full f)
+    | F64 f ->
+        F64 (shape, Full f)
     | I1 b ->
         I1 (shape, Full b)
     | I64 i ->
         I64 (shape, Full i)
+    | U32 i ->
+        U32 (shape, Full i)
+    | U64 i ->
+        U64 (shape, Full i)
 
   let value_type : type a b. (a, b) t -> a tensor ValueType.t =
    fun t ->
     match t with
     | F32 (shape, _) ->
         ValueType.Tensor_type (shape, F32)
+    | F64 (shape, _) ->
+        ValueType.Tensor_type (shape, F64)
     | I1 (shape, _) ->
         ValueType.Tensor_type (shape, I1)
     | I64 (shape, _) ->
         ValueType.Tensor_type (shape, I64)
+    | U32 (shape, _) ->
+        ValueType.Tensor_type (shape, U32)
+    | U64 (shape, _) ->
+        ValueType.Tensor_type (shape, U64)
 
   let calc_value : type a. a tensor_values -> int list -> a = function
     | Full v ->
@@ -491,19 +597,24 @@ end = struct
     match t with
     | F32 (_, f) ->
         F32 (calc_value f idx)
+    | F64 (_, f) ->
+        F64 (calc_value f idx)
     | I1 (_, b) ->
         I1 (calc_value b idx)
     | I64 (_, i) ->
         I64 (calc_value i idx)
+    | U32 (_, i) ->
+        U32 (calc_value i idx)
+    | U64 (_, i) ->
+        U64 (calc_value i idx)
 
-  let shape : type a b. (a, b) t -> int list =
-   fun t ->
-    match t with
-    | F32 (shape, _) ->
-        shape
-    | I1 (shape, _) ->
-        shape
-    | I64 (shape, _) ->
+  let shape : type a b. (a, b) t -> int list = function
+    | F32 (shape, _)
+    | F64 (shape, _)
+    | I1 (shape, _)
+    | I64 (shape, _)
+    | U32 (shape, _)
+    | U64 (shape, _) ->
         shape
 
   type 'a values = Tensor of 'a values Seq.t | Value of 'a
@@ -544,6 +655,8 @@ end = struct
   let from_float_list l = F32 ([List.length l], List l)
 
   let scalar_f32 f = F32 ([], Full f)
+
+  let scalar_u64 i = U64 ([], Full i)
 end
 
 let shape_of_var var =
@@ -915,6 +1028,135 @@ let vars_to_ops vars =
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
+      | RightShift (lhs, rhs) ->
+          let lhs, cache = aux ([], cache) lhs in
+          let rhs, cache = aux ([], cache) rhs in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= lhs @ rhs
+              ; outputs= [output]
+              ; name= "stablehlo.shift_right_logical"
+              ; attributes= []
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | LeftShift (lhs, rhs) ->
+          let lhs, cache = aux ([], cache) lhs in
+          let rhs, cache = aux ([], cache) rhs in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= lhs @ rhs
+              ; outputs= [output]
+              ; name= "stablehlo.shift_left"
+              ; attributes= []
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | Bitcast (var', new_type) ->
+          let var', cache = aux ([], cache) var' in
+          let output_id, Tensor_type (shape, _) = Var.to_annotated_value var in
+          let output =
+            ( output_id
+            , ValueType.tensor_to_stable_hlo (Tensor_type (shape, new_type)) )
+          in
+          let op =
+            Stable_hlo.
+              { inputs= var'
+              ; outputs= [output]
+              ; name= "stablehlo.bitcast_convert"
+              ; attributes= []
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | Convert (var', new_type) ->
+          let var', cache = aux ([], cache) var' in
+          let output_id, Tensor_type (shape, _) = Var.to_annotated_value var in
+          let output =
+            ( output_id
+            , ValueType.tensor_to_stable_hlo (Tensor_type (shape, new_type)) )
+          in
+          let op =
+            Stable_hlo.
+              { inputs= var'
+              ; outputs= [output]
+              ; name= "stablehlo.convert"
+              ; attributes= []
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | NoGrad var' ->
+          aux (prev_outputs, cache) var'
+      | Or (lhs, rhs) ->
+          let lhs, cache = aux ([], cache) lhs in
+          let rhs, cache = aux ([], cache) rhs in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= lhs @ rhs
+              ; outputs= [output]
+              ; name= "stablehlo.or"
+              ; attributes= []
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | Iota (index, _) ->
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= []
+              ; outputs= [output]
+              ; name= "stablehlo.iota"
+              ; attributes= [("iota_dimension", string_of_int index ^ " : i64")]
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | Reshape (var', _) ->
+          let var', cache = aux ([], cache) var' in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= var'
+              ; outputs= [output]
+              ; name= "stablehlo.reshape"
+              ; attributes= []
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | Sin var' ->
+          let var', cache = aux ([], cache) var' in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= var'
+              ; outputs= [output]
+              ; name= "stablehlo.sine"
+              ; attributes= []
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | Cos var' ->
+          let var', cache = aux ([], cache) var' in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= var'
+              ; outputs= [output]
+              ; name= "stablehlo.cosine"
+              ; attributes= []
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
   in
   let outputs, cache = aux ([], VarMap.empty) vars in
   (outputs, VarMap.bindings cache |> List.map snd |> List.map fst |> List.rev)
@@ -1001,6 +1243,26 @@ let compile entry =
         all_funcs cache var
     | Sum (var, _) ->
         all_funcs cache var
+    | RightShift (a, b) ->
+        all_funcs (all_funcs cache a) b
+    | LeftShift (a, b) ->
+        all_funcs (all_funcs cache a) b
+    | Bitcast (a, _) ->
+        all_funcs cache a
+    | Convert (a, _) ->
+        all_funcs cache a
+    | NoGrad var ->
+        all_funcs cache var
+    | Or (a, b) ->
+        all_funcs (all_funcs cache a) b
+    | Iota _ ->
+        cache
+    | Reshape (a, _) ->
+        all_funcs cache a
+    | Sin a ->
+        all_funcs cache a
+    | Cos a ->
+        all_funcs cache a
   in
   let main = func_to_stable_hlo entry |> Stable_hlo.func_to_string in
   let cache = StringMap.add entry.Func.name main StringMap.empty in

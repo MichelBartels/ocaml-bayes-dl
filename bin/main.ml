@@ -3,11 +3,24 @@ open Dsl
 
 (* let tanh x = (exp x -@ exp (0.0 -.< x)) /@ (exp x +@ exp (0.0 -.< x)) *)
 
+let () = Printexc.record_backtrace true
+
+(* let func = *)
+(*   Parameters.create_func (List_type []) (fun [] -> *)
+(*       Parameters.return @@ [Random.normal_f32 [4; 4]; Random.uniform_f32 [4; 4]] ) *)
+
+(* let ir = Ir.compile func *)
+
+(* let () = print_endline ir *)
+
+(* let () = Compile.compile ir "sample.vmfb" *)
+
 let sigmoid x = (tanh (x /.> 2.0) +.> 1.0) /.> 2.0
 
 let batch_size = 32
 
 let reparametrize mean var shape =
+  (* let eps = Random.normal_f32 shape in *)
   let eps =
     norm (zeros (Tensor_type ([], F32))) (ones (Tensor_type ([], F32))) shape
   in
@@ -108,17 +121,17 @@ let () =
   print_endline decoder_compiled ;
   Compile.compile decoder_compiled "decoder.vmfb"
 
-(* let main = *)
-(*   Backpropagate.diff Var (fun [a; b] -> *)
-(*       matmul a (Ir.Var.BroadcastInDim (b, [4])) ) *)
+let main =
+  Backpropagate.diff Var (fun [a; b] ->
+      matmul a (Ir.Var.BroadcastInDim (b, [4])) )
 
-(* let main = *)
-(*   Ir.create_func *)
-(*     (List_type [Tensor_type ([4; 2; 1], F32); Tensor_type ([1; 2], F32)]) *)
-(*     main *)
+let main =
+  Ir.create_func
+    (List_type [Tensor_type ([4; 2; 1], F32); Tensor_type ([1; 2], F32)])
+    main
 
-(* let main_compiled = Ir.compile main *)
+let main_compiled = Ir.compile main
 
-(* let () = *)
-(*   print_endline main_compiled ; *)
-(*   Compile.compile main_compiled "main.vmfb" *)
+let () =
+  print_endline main_compiled ;
+  Compile.compile main_compiled "main.vmfb"

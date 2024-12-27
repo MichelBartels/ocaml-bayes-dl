@@ -64,8 +64,17 @@ let params : type a. (a, a, a Ir.VarList.t) t =
 
 let create_func t f =
   let dummy_x = Ir.ValueType.to_arg t in
-  let dummy_inner = f dummy_x (Ir.ValueType.List_type []) in
-  let input_types = Ir.ValueType.List_type [dummy_inner.new_param_types; t] in
-  Ir.create_func input_types (fun [params; x] ->
-      let inner = f x (List_type []) in
-      inner.f params )
+  let dummy_inner =
+    Random.dummy_handler (fun () -> f dummy_x (Ir.ValueType.List_type []))
+  in
+  let input_types =
+    Ir.ValueType.List_type [dummy_inner.new_param_types; t; Random.seed_type]
+  in
+  Ir.create_func input_types (fun [params; x; seed] ->
+      Random.handler
+        (fun () ->
+          let inner = f x (List_type []) in
+          let y = inner.f params in
+          let seed = Random.current_seed () in
+          Ir.Var.[y; seed] )
+        seed )

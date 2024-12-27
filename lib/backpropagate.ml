@@ -219,6 +219,25 @@ let diff :
         in
         let new_grad = Ir.Var.Transpose (new_grad, perm) in
         backprop var new_grad x
+    | RightShift _ | LeftShift _ ->
+        failwith "shifts are not differentiable"
+    | Bitcast _ ->
+        failwith "bitcasts are not differentiable"
+    | Convert _ ->
+        failwith "backpropagation of convert not implemented"
+    | NoGrad _ ->
+        None
+    | Or _ ->
+        failwith "or is not differentiable"
+    | Iota _ ->
+        None
+    | Reshape (var, _) ->
+        let grad = reshape (Ir.shape_of_var var) grad in
+        backprop var grad x
+    | Sin var ->
+        backprop var (grad *@ cos var) x
+    | Cos var ->
+        backprop var (grad *@ (Dsl.zeros_like var -@ sin var)) x
   in
   let rec wrap_inputs :
       type a b c d. (a, b, c, d) input -> a Ir.Var.t -> a Ir.Var.t =
