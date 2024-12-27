@@ -238,6 +238,8 @@ let diff :
         backprop var (grad *@ cos var) x
     | Cos var ->
         backprop var (grad *@ (Dsl.zeros_like var -@ sin var)) x
+    | Concatenate _ ->
+        failwith "backpropagation of concatenate not implemented"
   in
   let rec wrap_inputs :
       type a b c d. (a, b, c, d) input -> a Ir.Var.t -> a Ir.Var.t =

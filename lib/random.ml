@@ -36,24 +36,32 @@ let uniform_f32 ?(key = key) shape =
   no_grad x
 
 let normal_f32 ?(key = key) shape =
-  let u0 = uniform_f32 ~key shape in
-  let u1 = uniform_f32 ~key shape in
-  sqrt (-2.0 *.< ln (1. -.< u0)) *@ cos (2.0 *. Float.pi *.< u1)
+  let size = List.fold_left ( * ) 1 shape in
+  let half_size = size / 2 in
+  let flat_shape = [half_size] in
+  let u0 = uniform_f32 ~key flat_shape in
+  let u1 = uniform_f32 ~key flat_shape in
+  let factor = sqrt (-2.0 *.< ln (1. -.< u0)) in
+  let inner = 2.0 *. Float.pi *.< u1 in
+  let z_0 = factor *@ sin inner in
+  let z_1 = factor *@ cos inner in
+  concat 0 [z_0; z_1] |> reshape shape
 
 let current_seed () = Effect.perform (Counter 0)
 
 let handler f (ctr : Ir.u64 Ir.tensor Ir.Var.t) =
+  let open Effect.Deep in
   let ctr_ref = ref ctr in
-  Effect.Deep.try_with f ()
+  try_with f ()
     { effc=
         (fun (type a) (eff : a Effect.t) ->
           match eff with
           | Counter incr ->
               Some
-                (fun (k : (a, _) Effect.Deep.continuation) ->
+                (fun (k : (a, _) continuation) ->
                   let ctr = !ctr_ref in
                   ctr_ref := ctr +@ scalar_u64 (string_of_int incr) ;
-                  Effect.Deep.continue k ctr )
+                  continue k ctr )
           | _ ->
               None ) }
 

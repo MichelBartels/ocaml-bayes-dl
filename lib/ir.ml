@@ -113,6 +113,7 @@ module rec Var : sig
     | Reshape : 'a tensor t * int list -> 'a tensor t
     | Sin : 'a tensor t -> 'a tensor t
     | Cos : 'a tensor t -> 'a tensor t
+    | Concatenate : 'a tensor t list * int -> 'a tensor t
 
   val to_var_list : 'a VarList.t t -> 'a VarList.t
 
@@ -180,6 +181,7 @@ end = struct
     | Reshape : 'a tensor t * int list -> 'a tensor t
     | Sin : 'a tensor t -> 'a tensor t
     | Cos : 'a tensor t -> 'a tensor t
+    | Concatenate : 'a tensor t list * int -> 'a tensor t
 
   let rec to_var_list : type a. a VarList.t t -> a VarList.t = function
     | [] ->
@@ -297,6 +299,8 @@ end = struct
     | (Sin _ as a), b ->
         fn a b acc
     | (Cos _ as a), b ->
+        fn a b acc
+    | (Concatenate _ as a), b ->
         fn a b acc
 
   let map2 ({fn} : map2_fn) a b =
@@ -450,6 +454,20 @@ end = struct
         of_var var
     | Cos var ->
         of_var var
+    | Concatenate (vars, axis) ->
+        let vars = List.map of_var vars in
+        let (Tensor_type (shape, element_type)) = List.hd vars in
+        let new_shape =
+          List.mapi
+            (fun i _ ->
+              if i = axis then
+                List.fold_left
+                  (fun acc (Tensor_type (shape, _)) -> acc + List.nth shape i)
+                  0 vars
+              else List.nth shape i )
+            shape
+        in
+        Tensor_type (new_shape, element_type)
 
   let rec to_arg : type a. a t -> a Var.t = function
     | Tensor_type _ as t ->
@@ -1157,6 +1175,25 @@ let vars_to_ops vars =
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
+      | Concatenate (vars, axis) ->
+          let cache, vars =
+            List.fold_left_map
+              (fun cache var ->
+                let vars, cache = aux ([], cache) var in
+                (cache, List.hd vars) )
+              cache vars
+          in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= vars
+              ; outputs= [output]
+              ; name= "stablehlo.concatenate"
+              ; attributes= [("dimension", string_of_int axis)]
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
   in
   let outputs, cache = aux ([], VarMap.empty) vars in
   (outputs, VarMap.bindings cache |> List.map snd |> List.map fst |> List.rev)
@@ -1263,6 +1300,8 @@ let compile entry =
         all_funcs cache a
     | Cos a ->
         all_funcs cache a
+    | Concatenate (vars, _) ->
+        List.fold_left (fun acc var -> all_funcs acc var) cache vars
   in
   let main = func_to_stable_hlo entry |> Stable_hlo.func_to_string in
   let cache = StringMap.add entry.Func.name main StringMap.empty in

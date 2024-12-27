@@ -277,3 +277,5 @@ let no_grad x = Ir.Var.NoGrad x
 let sin x = Var.Sin x
 
 let cos x = Var.Cos x
+
+let concat axis vars = Var.Concatenate (vars, axis)
