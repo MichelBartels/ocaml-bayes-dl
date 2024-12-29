@@ -510,19 +510,23 @@ end
 and Tensor : sig
   type ('a, 'b) t
 
-  type (_, _) value =
-    | F32 : float -> (f32, float) value
-    | F64 : float -> (f64, float) value
-    | I1 : bool -> (i1, bool) value
-    | I64 : int -> (i64, int) value
-    | U32 : string -> (u32, string) value
-    | U64 : string -> (u64, string) value
+  type (_, _) kind =
+    | F32 : (f32, float) kind
+    | F64 : (f64, float) kind
+    | I1 : (i1, bool) kind
+    | I64 : (i64, Signed.Int64.t) kind
+    | U32 : (u32, Unsigned.uint32) kind
+    | U64 : (u64, Unsigned.uint64) kind
 
-  val full : ('a, 'b) value -> int list -> ('a, 'b) t
+  val c_type : ('a, 'b) kind -> 'b Ctypes.typ
+
+  val kind : ('a, 'b) t -> ('a, 'b) kind
+
+  val full : ('a, 'b) kind -> 'b -> int list -> ('a, 'b) t
 
   val value_type : ('a, 'b) t -> 'a tensor ValueType.t
 
-  val get : ('a, 'b) t -> int list -> ('a, 'b) value
+  val get : ('a, 'b) t -> int list -> 'b
 
   val shape : ('a, 'b) t -> shape
 
@@ -530,110 +534,89 @@ and Tensor : sig
 
   val to_ir : ('a, 'b) t -> 'a tensor Var.t
 
-  val from_int_list : int list -> (i64, int) t
+  val from_int_list : Signed.Int64.t list -> (i64, Signed.Int64.t) t
 
   val from_float_list : float list -> (f32, float) t
 
   val scalar_f32 : float -> (f32, float) t
 
-  val scalar_u64 : string -> (u64, string) t
+  val scalar_u64 : string -> (u64, Unsigned.uint64) t
+
+  val carray : ('a, 'b) t -> 'b Ctypes.CArray.t
 end = struct
-  type _ tensor_values =
-    | Full : 'a -> 'a tensor_values
-    | List : 'a list -> 'a tensor_values
+  open Ctypes
 
-  type ('a, 'b) generic_tensor = int list * 'b tensor_values
+  type (_, _) kind =
+    | F32 : (f32, float) kind
+    | F64 : (f64, float) kind
+    | I1 : (i1, bool) kind
+    | I64 : (i64, Signed.Int64.t) kind
+    | U32 : (u32, Unsigned.uint32) kind
+    | U64 : (u64, Unsigned.uint64) kind
 
-  type (_, _) value =
-    | F32 : float -> (f32, float) value
-    | F64 : float -> (f64, float) value
-    | I1 : bool -> (i1, bool) value
-    | I64 : int -> (i64, int) value
-    | U32 : string -> (u32, string) value
-    | U64 : string -> (u64, string) value
-
-  let value_to_string : type a b. (a, b) value -> string =
-   fun v ->
-    match v with
-    | F32 f | F64 f ->
-        Printf.sprintf "%e" f
-    | I1 b ->
+  let value_to_string : type a b. (a, b) kind -> b -> string =
+   fun kind v ->
+    match (kind, v) with
+    | F32, v ->
+        Printf.sprintf "%e" v
+    | F64, v ->
+        Printf.sprintf "%e" v
+    | I1, b ->
         string_of_bool b
-    | I64 i ->
-        string_of_int i
-    | U32 i | U64 i ->
-        i
+    | I64, i ->
+        Signed.Int64.to_string i
+    | U32, i ->
+        Unsigned.UInt32.to_string i
+    | U64, i ->
+        Unsigned.UInt64.to_string i
 
-  type (_, _) t =
-    | F32 : (f32, float) generic_tensor -> (f32, float) t
-    | F64 : (f64, float) generic_tensor -> (f64, float) t
-    | I1 : (i1, bool) generic_tensor -> (i1, bool) t
-    | I64 : (i64, int) generic_tensor -> (i64, int) t
-    | U32 : (u32, string) generic_tensor -> (u32, string) t
-    | U64 : (u64, string) generic_tensor -> (u64, string) t
+  type ('a, 'b) t =
+    {kind: ('a, 'b) kind; arr: 'b Ctypes.CArray.t; shape: int list}
 
-  let full : type a b. (a, b) value -> int list -> (a, b) t =
-   fun value shape ->
-    match value with
-    | F32 f ->
-        F32 (shape, Full f)
-    | F64 f ->
-        F64 (shape, Full f)
-    | I1 b ->
-        I1 (shape, Full b)
-    | I64 i ->
-        I64 (shape, Full i)
-    | U32 i ->
-        U32 (shape, Full i)
-    | U64 i ->
-        U64 (shape, Full i)
+  let kind {kind; _} = kind
+
+  let c_type : type a b. (a, b) kind -> b typ = function
+    | F32 ->
+        float
+    | F64 ->
+        double
+    | I1 ->
+        bool
+    | I64 ->
+        int64_t
+    | U32 ->
+        uint32_t
+    | U64 ->
+        uint64_t
+
+  let full : type a b. (a, b) kind -> b -> int list -> (a, b) t =
+   fun kind initial shape ->
+    let size = List.fold_left ( * ) 1 shape in
+    {kind; arr= CArray.make ~initial (c_type kind) size; shape}
 
   let value_type : type a b. (a, b) t -> a tensor ValueType.t =
-   fun t ->
-    match t with
-    | F32 (shape, _) ->
+   fun {kind; shape; _} ->
+    match kind with
+    | F32 ->
         ValueType.Tensor_type (shape, F32)
-    | F64 (shape, _) ->
+    | F64 ->
         ValueType.Tensor_type (shape, F64)
-    | I1 (shape, _) ->
+    | I1 ->
         ValueType.Tensor_type (shape, I1)
-    | I64 (shape, _) ->
+    | I64 ->
         ValueType.Tensor_type (shape, I64)
-    | U32 (shape, _) ->
+    | U32 ->
         ValueType.Tensor_type (shape, U32)
-    | U64 (shape, _) ->
+    | U64 ->
         ValueType.Tensor_type (shape, U64)
 
-  let calc_value : type a. a tensor_values -> int list -> a = function
-    | Full v ->
-        Fun.const v
-    | List l ->
-        fun i -> List.nth l (List.hd i)
+  let calc_index shape idx =
+    List.fold_left (fun acc (i, j) -> (acc * i) + j) 0 (List.combine shape idx)
 
-  let get : type a b. (a, b) t -> int list -> (a, b) value =
-   fun t idx ->
-    match t with
-    | F32 (_, f) ->
-        F32 (calc_value f idx)
-    | F64 (_, f) ->
-        F64 (calc_value f idx)
-    | I1 (_, b) ->
-        I1 (calc_value b idx)
-    | I64 (_, i) ->
-        I64 (calc_value i idx)
-    | U32 (_, i) ->
-        U32 (calc_value i idx)
-    | U64 (_, i) ->
-        U64 (calc_value i idx)
+  let get : type a b. (a, b) t -> int list -> b =
+   fun t idx -> CArray.get t.arr (calc_index t.shape idx)
 
-  let shape : type a b. (a, b) t -> int list = function
-    | F32 (shape, _)
-    | F64 (shape, _)
-    | I1 (shape, _)
-    | I64 (shape, _)
-    | U32 (shape, _)
-    | U64 (shape, _) ->
-        shape
+  let shape {shape; _} = shape
 
   type 'a values = Tensor of 'a values Seq.t | Value of 'a
 
@@ -655,7 +638,7 @@ end = struct
           ^ (Seq.map values_to_string s |> List.of_seq |> String.concat ", ")
           ^ "]"
       | Value v ->
-          value_to_string v
+          value_to_string t.kind v
     in
     let data = values_to_string (values t) in
     let signature =
@@ -668,13 +651,18 @@ end = struct
     let value_type = value_type t in
     Var.Constant (value_type, t)
 
-  let from_int_list l = I64 ([List.length l], List l)
+  let from_list kind list =
+    {kind; arr= CArray.of_list (c_type kind) list; shape= [List.length list]}
 
-  let from_float_list l = F32 ([List.length l], List l)
+  let from_int_list = from_list I64
 
-  let scalar_f32 f = F32 ([], Full f)
+  let from_float_list = from_list F32
 
-  let scalar_u64 i = U64 ([], Full i)
+  let scalar_f32 f = full F32 f []
+
+  let scalar_u64 s = full U64 (Unsigned.UInt64.of_string s) []
+
+  let carray {arr; _} = arr
 end
 
 let shape_of_var var =

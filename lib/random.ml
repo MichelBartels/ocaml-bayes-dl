@@ -1,6 +1,7 @@
 open Dsl
 
-let rotate x n = x >>.> string_of_int n |@ (x <<.> string_of_int (64 - n))
+let rotate x n =
+  x >>.> Unsigned.UInt64.of_int n |@ (x <<.> Unsigned.UInt64.of_int (64 - n))
 
 let squares32 ctr key =
   let x = ctr *@ key in
@@ -11,11 +12,11 @@ let squares32 ctr key =
   let x = (x *@ x) +@ z in
   let x = rotate x 32 in
   let x = (x *@ x) +@ y in
-  (x *@ x) +@ z >>.> "32"
+  (x *@ x) +@ z >>.> Unsigned.UInt64.of_int 32
 
 let random_u64_to_f32 x =
-  let x = x >>.> "9" in
-  let x = x |.> "0x3f800000" in
+  let x = x >>.> Unsigned.UInt64.of_int 9 in
+  let x = x |.> Unsigned.UInt64.of_string "0x3f800000" in
   let f = x |> convert U32 |> bitcast F32 in
   f -.> 1.0
 

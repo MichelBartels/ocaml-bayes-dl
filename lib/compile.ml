@@ -1,6 +1,7 @@
 open C.Functions
 open C.Type
 open Ctypes
+open C_utils
 
 let set_hal_target session target =
   let flag = "--iree-hal-target-device=" ^ target in
@@ -14,10 +15,7 @@ let assert_no_error = function
   | None ->
       ()
 
-let create_out_param c_type f =
-  let out_ptr = allocate_n (ptr c_type) ~count:1 in
-  let err = f out_ptr in
-  assert_no_error err ; !@out_ptr
+let create_out_param c_type f = create_out_param assert_no_error (ptr c_type) f
 
 let source_from_string session str =
   source_wrap_buffer session "<stdin>" str
@@ -27,7 +25,11 @@ let source_from_string session str =
 
 let create_output file = output_open_file file |> create_out_param output
 
-let create_invocation session =
+let session () = protect session_destroy @@ Option.get @@ session_create ()
+
+let invocation session =
+  protect invocation_destroy
+  @@
   match invocation_create session with
   | Some invocation ->
       invocation
@@ -46,16 +48,13 @@ let output_invocation invocation output =
   let err = invocation_output_vm_bytecode invocation output in
   assert_no_error err
 
-let ( let& ) (x, destructor) f =
-  Fun.protect ~finally:(fun () -> destructor x) (fun () -> f x)
-
 let compile str file =
   global_initialize () ;
-  let& session = (session_create () |> Option.get, session_destroy) in
-  set_hal_target session "cuda" ;
+  let session = session () in
+  set_hal_target session "vulkan" ;
   let source = source_from_string session str in
   let output = create_output file in
-  let& invocation = (create_invocation session, invocation_destroy) in
+  let invocation = invocation session in
   parse_source invocation source ;
   invoke_pipeline invocation Std ;
   output_invocation invocation output
