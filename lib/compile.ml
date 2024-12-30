@@ -58,3 +58,17 @@ let compile str file =
   parse_source invocation source ;
   invoke_pipeline invocation Std ;
   output_invocation invocation output
+
+let cache_folder = "./.vmfb_cache"
+
+let () =
+  if not @@ Sys.file_exists cache_folder then Sys.mkdir cache_folder 0o777
+
+let model_path str =
+  let hash = Digest.string str |> Digest.to_hex in
+  Filename.concat cache_folder (hash ^ ".vmfb")
+
+let get_compiled_model str =
+  let path = model_path str in
+  if not @@ Sys.file_exists path then compile str path ;
+  path

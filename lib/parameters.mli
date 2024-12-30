@@ -22,8 +22,9 @@ val create_func :
   -> ('a Ir.Var.t -> (unit, 'b, 'c) t)
   -> ( (   'b Ir.VarList.t Ir.Var.t
         -> 'a Ir.Var.t
-        -> Ir.u64 Ir.tensor Ir.Var.t
+        -> (Ir.u64, Unsigned.uint64) Ir.tensor Ir.Var.t
         -> unit )
        Ir.VarList.t
-     , ('c Ir.Var.t -> Ir.u64 Ir.tensor Ir.Var.t -> unit) Ir.VarList.t )
+     , ('c Ir.Var.t -> (Ir.u64, Unsigned.uint64) Ir.tensor Ir.Var.t -> unit)
+       Ir.VarList.t )
      Ir.Func.t

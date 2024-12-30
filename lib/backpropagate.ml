@@ -22,10 +22,10 @@ let diff :
     -> c Ir.VarList.t Ir.Var.t =
  fun l f inputs ->
   let opt_add :
-      type a.
-         a Ir.tensor Ir.Var.t option
-      -> a Ir.tensor Ir.Var.t option
-      -> a Ir.tensor Ir.Var.t option =
+      type a b.
+         (a, b) Ir.tensor Ir.Var.t option
+      -> (a, b) Ir.tensor Ir.Var.t option
+      -> (a, b) Ir.tensor Ir.Var.t option =
    fun x y ->
     match (x, y) with
     | Some x, Some y ->
@@ -36,10 +36,10 @@ let diff :
         None
   in
   let opt_sub :
-      type a.
-         a Ir.tensor Ir.Var.t option
-      -> a Ir.tensor Ir.Var.t option
-      -> a Ir.tensor Ir.Var.t option =
+      type a b.
+         (a, b) Ir.tensor Ir.Var.t option
+      -> (a, b) Ir.tensor Ir.Var.t option
+      -> (a, b) Ir.tensor Ir.Var.t option =
    fun x y ->
     match (x, y) with
     | Some x, Some y ->

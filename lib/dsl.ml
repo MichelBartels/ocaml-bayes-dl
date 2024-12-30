@@ -158,7 +158,9 @@ let sqrt a = a **.> 0.5
 
 let tanh a = Var.Tanh a
 
-let ones : type a. a Ir.tensor Ir.ValueType.t -> a Ir.tensor Ir.Var.t = function
+let ones :
+    type a b. (a, b) Ir.tensor Ir.ValueType.t -> (a, b) Ir.tensor Ir.Var.t =
+  function
   | Tensor_type (shape, F32) ->
       full F32 1. shape
   | Tensor_type (shape, F64) ->
@@ -174,7 +176,8 @@ let ones : type a. a Ir.tensor Ir.ValueType.t -> a Ir.tensor Ir.Var.t = function
 
 let ones_like t = ones (Ir.ValueType.of_var t)
 
-let zeros : type a. a Ir.tensor Ir.ValueType.t -> a Ir.tensor Ir.Var.t =
+let zeros :
+    type a b. (a, b) Ir.tensor Ir.ValueType.t -> (a, b) Ir.tensor Ir.Var.t =
   function
   | Tensor_type (shape, F32) ->
       full F32 0. shape
@@ -233,9 +236,11 @@ let scalar_f32 = Fun.compose Ir.Tensor.to_ir Ir.Tensor.scalar_f32
 
 let scalar_u64 = Fun.compose Ir.Tensor.to_ir Ir.Tensor.scalar_u64
 
-let assert_float_fn (f : Ir.f32 Ir.tensor Ir.Var.t -> Ir.f32 Ir.tensor Ir.Var.t)
-    : Ir.Var.map_fn =
-  let fn : type a. a Ir.tensor Ir.Var.t -> a Ir.tensor Ir.Var.t =
+let assert_float_fn
+    (f :
+      (Ir.f32, float) Ir.tensor Ir.Var.t -> (Ir.f32, float) Ir.tensor Ir.Var.t
+      ) : Ir.Var.map_fn =
+  let fn : type a b. (a, b) Ir.tensor Ir.Var.t -> (a, b) Ir.tensor Ir.Var.t =
    fun x ->
     match Ir.ValueType.of_var x with
     | Ir.ValueType.Tensor_type (_, F32) ->
@@ -247,12 +252,14 @@ let assert_float_fn (f : Ir.f32 Ir.tensor Ir.Var.t -> Ir.f32 Ir.tensor Ir.Var.t)
 
 let assert_float2_fn
     (f :
-         Ir.f32 Ir.tensor Ir.Var.t
-      -> Ir.f32 Ir.tensor Ir.Var.t
-      -> Ir.f32 Ir.tensor Ir.Var.t ) : Ir.Var.map2_fn =
+         (Ir.f32, float) Ir.tensor Ir.Var.t
+      -> (Ir.f32, float) Ir.tensor Ir.Var.t
+      -> (Ir.f32, float) Ir.tensor Ir.Var.t ) : Ir.Var.map2_fn =
   let fn :
-      type a.
-      a Ir.tensor Ir.Var.t -> a Ir.tensor Ir.Var.t -> a Ir.tensor Ir.Var.t =
+      type a b.
+         (a, b) Ir.tensor Ir.Var.t
+      -> (a, b) Ir.tensor Ir.Var.t
+      -> (a, b) Ir.tensor Ir.Var.t =
    fun x y ->
     match Ir.ValueType.of_var x with
     | Ir.ValueType.Tensor_type (_, F32) ->

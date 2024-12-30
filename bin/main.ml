@@ -127,4 +127,4 @@ let () =
   print_endline "Compiled function:" ;
   print_endline main_compiled ;
   Runtime.simple_mul () ;
-  Compile.compile main_compiled "main.vmfb"
+  print_endline @@ Compile.get_compiled_model main_compiled
