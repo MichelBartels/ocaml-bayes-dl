@@ -29,6 +29,34 @@ type (_, _) tensor =
   | U32 : (u32, Unsigned.uint32) tensor
   | U64 : (u64, Unsigned.uint64) tensor
 
+let zeros : type a b. (a, b) tensor -> b = function
+  | F32 ->
+      0.0
+  | F64 ->
+      0.0
+  | I1 ->
+      false
+  | I64 ->
+      Signed.Int64.zero
+  | U32 ->
+      Unsigned.UInt32.zero
+  | U64 ->
+      Unsigned.UInt64.zero
+
+let ones : type a b. (a, b) tensor -> b = function
+  | F32 ->
+      1.0
+  | F64 ->
+      1.0
+  | I1 ->
+      true
+  | I64 ->
+      Signed.Int64.one
+  | U32 ->
+      Unsigned.UInt32.one
+  | U64 ->
+      Unsigned.UInt64.one
+
 type shape = int list
 
 let tensor_element_type_to_stable_hlo :
@@ -86,9 +114,7 @@ module rec Var : sig
         -> (i1, bool) tensor t
     | Min : ('a, 'b) tensor t * ('a, 'b) tensor t -> ('a, 'b) tensor t
     | Max : ('a, 'b) tensor t * ('a, 'b) tensor t -> ('a, 'b) tensor t
-    | Constant :
-        ('a, 'b) tensor ValueType.t * ('a, 'b) Tensor.t
-        -> ('a, 'b) tensor t
+    | Constant : ('a, 'b) Tensor.t -> ('a, 'b) tensor t
     | DotProduct :
         ('a, 'b) tensor t
         * ('a, 'b) tensor t
@@ -171,9 +197,7 @@ end = struct
         -> (i1, bool) tensor t
     | Min : ('a, 'b) tensor t * ('a, 'b) tensor t -> ('a, 'b) tensor t
     | Max : ('a, 'b) tensor t * ('a, 'b) tensor t -> ('a, 'b) tensor t
-    | Constant :
-        ('a, 'b) tensor ValueType.t * ('a, 'b) Tensor.t
-        -> ('a, 'b) tensor t
+    | Constant : ('a, 'b) Tensor.t -> ('a, 'b) tensor t
     | DotProduct :
         ('a, 'b) tensor t
         * ('a, 'b) tensor t
@@ -408,8 +432,8 @@ end = struct
         of_var lhs
     | Max (lhs, _) ->
         of_var lhs
-    | Constant (value_type, _) ->
-        value_type
+    | Constant t ->
+        Tensor.value_type t
     | DotProduct
         ( lhs
         , rhs
@@ -563,9 +587,10 @@ and Tensor : sig
 
   val to_ir : ('a, 'b) t -> ('a, 'b) tensor Var.t
 
-  val from_int_list : Signed.Int64.t list -> (i64, Signed.Int64.t) t
+  val from_int_list :
+    ?shape:shape -> Signed.Int64.t list -> (i64, Signed.Int64.t) t
 
-  val from_float_list : float list -> (f32, float) t
+  val from_float_list : ?shape:shape -> float list -> (f32, float) t
 
   val from_carray : ('a, 'b) tensor -> shape -> 'b Ctypes.CArray.t -> ('a, 'b) t
 
@@ -670,16 +695,16 @@ end = struct
     in
     Printf.sprintf "dense<%s> : %s" data signature
 
-  let to_ir t =
-    let value_type = value_type t in
-    Var.Constant (value_type, t)
+  let to_ir t = Var.Constant t
 
-  let from_list kind list =
-    {kind; arr= CArray.of_list (c_type kind) list; shape= [List.length list]}
+  let from_list ?shape kind list =
+    { kind
+    ; arr= CArray.of_list (c_type kind) list
+    ; shape= Option.value shape ~default:[List.length list] }
 
-  let from_int_list = from_list I64
+  let from_int_list ?shape = from_list ?shape I64
 
-  let from_float_list = from_list F32
+  let from_float_list ?shape = from_list ?shape F32
 
   let scalar_f32 f = full F32 f []
 
@@ -883,7 +908,7 @@ let vars_to_ops vars =
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
-      | Constant (_, repr) ->
+      | Constant repr ->
           let output = Var.to_annotated_value var in
           let op =
             Stable_hlo.
@@ -1023,8 +1048,7 @@ let vars_to_ops vars =
       | Sum (var', dimensions) ->
           let var', cache = aux ([], cache) var' in
           let initial, cache =
-            aux ([], cache)
-              (Constant (Tensor_type ([], F32), Tensor.scalar_f32 0.0))
+            aux ([], cache) (Constant (Tensor.scalar_f32 0.0))
           in
           let output = Var.to_annotated_value var in
           let op =
@@ -1234,7 +1258,8 @@ let func_to_stable_hlo (func : ('a, 'b) Func.t) =
   let outputs, ops = vars_to_ops func.outputs in
   let ops = List.filter_map (fun x -> x) ops in
   let inputs = ValueType.to_stable_hlo func.inputs in
-  let inputs = List.combine func.parameter_names inputs in
+  let inputs = List.combine func.parameter_names inputs |> List.rev in
+  let outputs = List.rev outputs in
   let return_ops = annotated_values_to_return_op outputs in
   let outputs = List.map snd outputs in
   Stable_hlo.{id= func.name; inputs; outputs; body= ops @ [return_ops]}

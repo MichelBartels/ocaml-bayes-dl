@@ -206,6 +206,8 @@ module Types (F : TYPE) = struct
   let element_type_bfloat_16 =
     constant "IREE_HAL_ELEMENT_TYPE_BFLOAT_16" uint32_t
 
+  let element_type_bool_8 = constant "IREE_HAL_ELEMENT_TYPE_BOOL_8" uint32_t
+
   let element_type = uint32_t
 
   let encoding_type_dense_row_major =

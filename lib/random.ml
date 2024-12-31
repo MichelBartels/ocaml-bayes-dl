@@ -40,6 +40,7 @@ let uniform_f32 ?(key = key) shape =
 let normal_f32 ?(key = key) shape =
   let size = List.fold_left ( * ) 1 shape in
   let half_size = size / 2 in
+  assert (size mod 2 = 0) ;
   let flat_shape = [half_size] in
   let u0 = uniform_f32 ~key flat_shape in
   let u1 = uniform_f32 ~key flat_shape in
@@ -70,3 +71,5 @@ let handler f (ctr : (Ir.u64, Unsigned.uint64) Ir.tensor Ir.Var.t) =
 let dummy_handler f = handler f (scalar_u64 "0")
 
 let seed_type = Ir.ValueType.Tensor_type ([], U64)
+
+let initial_seed = Ir.Tensor.scalar_u64 "0"

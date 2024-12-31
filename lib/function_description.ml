@@ -81,6 +81,12 @@ module Functions (F : FOREIGN) = struct
 
   let status_ok = foreign "iree_status_is_ok" (Types.status @-> returning bool)
 
+  let status_to_string =
+    foreign "iree_status_to_string"
+      ( Types.status @-> ptr Types.allocator
+      @-> ptr (ptr char)
+      @-> ptr size_t @-> returning void )
+
   let make_string_view =
     foreign "iree_make_cstring_view" (string @-> returning Types.string_view)
 

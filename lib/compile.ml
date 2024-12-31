@@ -48,10 +48,10 @@ let output_invocation invocation output =
   let err = invocation_output_vm_bytecode invocation output in
   assert_no_error err
 
-let compile str file =
+let compile device_str str file =
   global_initialize () ;
   let session = session () in
-  set_hal_target session "vulkan" ;
+  set_hal_target session device_str ;
   let source = source_from_string session str in
   let output = create_output file in
   let invocation = invocation session in
@@ -68,7 +68,7 @@ let model_path str =
   let hash = Digest.string str |> Digest.to_hex in
   Filename.concat cache_folder (hash ^ ".vmfb")
 
-let get_compiled_model str =
-  let path = model_path str in
-  if not @@ Sys.file_exists path then compile str path ;
+let get_compiled_model device_str str =
+  let path = model_path (device_str ^ str) in
+  if not @@ Sys.file_exists path then compile device_str str path ;
   path
