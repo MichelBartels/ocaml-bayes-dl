@@ -28,8 +28,8 @@ let load_images t =
       let offset = 16 + (i * 784) in
       let img =
         List.init 784 (fun i ->
-            float_of_int (String.get_int8 str (offset + i)) /. 255. )
+            float_of_int (String.get_uint8 str (offset + i)) /. 255. )
       in
       img :: loop (i + 1)
   in
-  ([1; 784], loop 0)
+  ([1; 784], List.to_seq @@ loop 0)

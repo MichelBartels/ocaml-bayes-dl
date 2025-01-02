@@ -100,18 +100,16 @@ end = struct
     {device; allocator; instance; session; kind}
 
   let compile device input_type f =
-    let input_type =
-      Ir.ValueType.List_type [input_type; Tensor_type ([], U64)]
-    in
+    let input_type = Ir.ValueType.List.[input_type; E ([], Ir.U64)] in
     let func =
-      Ir.create_func input_type (fun [x; seed] ->
+      Ir.create_func input_type (fun [x; E seed] ->
           Random.handler
             (fun () ->
               let y = f x in
-              Ir.Var.[y; Random.current_seed ()] )
+              Ir.Var.List.[y; E (Random.current_seed ())] )
             seed )
     in
-    let output_type = Ir.ValueType.of_var func.outputs in
+    let output_type = Ir.ValueType.of_vars func.outputs in
     let func_str = Ir.compile func in
     let compiled =
       Compile.get_compiled_model (compile_device_str device.kind) func_str
@@ -129,33 +127,35 @@ end = struct
 end
 
 and Buffer : sig
-  type ('a, 'b, 'c) t =
+  type ('a, 'b) t =
     { view: buffer_view structure Ctypes_static.ptr
     ; shape: int list
-    ; device: 'c Device.t
-    ; kind: ('a, 'b) Ir.tensor }
+    ; device: 'b Device.t
+    ; kind: 'a Ir.tensor }
 
   val make :
-       'c Device.t
+       'b Device.t
     -> int list
-    -> ('a, 'b) Ir.tensor
+    -> 'a Ir.tensor
     -> buffer_view structure Ctypes_static.ptr
-    -> ('a, 'b, 'c) t
+    -> ('a, 'b) t
 
   val of_float_list :
-    'a Device.t -> int list -> float list -> (Ir.f32, float, 'a) t
+    'a Device.t -> int list -> float list -> (Ir.f32 * float, 'a) t
 
-  val to_float_list : (Ir.f32, float, 'a) t -> float list
+  val to_float_list : (Ir.f32 * float, 'a) t -> float list
 
-  val of_tensor : 'c Device.t -> ('a, 'b) Ir.Tensor.t -> ('a, 'b, 'c) t
+  val of_tensor : 'b Device.t -> 'a Ir.Tensor.t -> ('a, 'b) t
 
-  val to_tensor : ('a, 'b, 'c) t -> ('a, 'b) Ir.Tensor.t
+  val to_tensor : ('a * 'b, 'c) t -> ('a * 'b) Ir.Tensor.t
+
+  val move : 'a Device.t -> ('b, 'c) t -> ('b, 'a) t
 end = struct
-  type ('a, 'b, 'c) t =
+  type ('a, 'b) t =
     { view: buffer_view structure Ctypes_static.ptr
     ; shape: int list
-    ; device: 'c Device.t
-    ; kind: ('a, 'b) Ir.tensor }
+    ; device: 'b Device.t
+    ; kind: 'a Ir.tensor }
 
   let buffer_params =
     let p = make buffer_params in
@@ -166,8 +166,7 @@ end = struct
 
   let make device shape kind view = {view; shape; device; kind}
 
-  let iree_element_type : type a b. (a, b) Ir.tensor -> Unsigned.uint32 =
-    function
+  let iree_element_type : type a. a Ir.tensor -> Unsigned.uint32 = function
     | F32 ->
         element_type_float_32
     | F64 ->
@@ -219,13 +218,33 @@ end = struct
     |> assert_no_error ;
     data
 
+  let to_any_carray : type a b. (a, b) t -> Ir.Tensor.any_carray =
+   fun buffer ->
+    let (Any c_type) = Ir.Tensor.any_c_type buffer.kind in
+    let data = size buffer |> CArray.make c_type in
+    let data_ptr = CArray.start data |> to_voidp in
+    let size = CArray.length data * sizeof c_type |> Unsigned.Size_t.of_int in
+    device_transfer_d2h buffer.device.device
+      (buffer_view_buffer buffer.view)
+      (Unsigned.Size_t.of_int 0) data_ptr size transfer_buffer_flag_default
+      (infinite_timeout ())
+    |> assert_no_error ;
+    Any data
+
   let to_float_list buffer = to_carray buffer |> CArray.to_list
 
-  let of_tensor device tensor =
-    let arr = Ir.Tensor.carray tensor in
-    let element_type = Ir.Tensor.c_type @@ Ir.Tensor.kind tensor in
-    let (Tensor_type (shape, _)) = Ir.Tensor.value_type tensor in
+  let of_tensor : type a b. a Device.t -> b Ir.Tensor.t -> (b, a) t =
+   fun device tensor ->
+    let (Any arr) = Ir.Tensor.any_carray tensor in
+    let (Any element_type) = Ir.Tensor.any_c_type @@ Ir.Tensor.kind tensor in
+    let shape, _ = Ir.Tensor.value_type tensor in
     of_carray device element_type shape (Ir.Tensor.kind tensor) arr
+
+  let move : type a b c. a Device.t -> (b, c) t -> (b, a) t =
+   fun device buffer ->
+    let (Any arr) = to_any_carray buffer in
+    let (Any element_type) = Ir.Tensor.any_c_type buffer.kind in
+    of_carray device element_type buffer.shape buffer.kind arr
 
   let to_tensor buffer =
     let arr = to_carray buffer in
@@ -280,15 +299,15 @@ end = struct
       type a b c d.
       (a, b, c) t -> d Ir.ValueType.t -> (d, c Value.device) Value.t =
    fun t -> function
-    | Tensor_type (shape, kind) ->
+    | E (shape, kind) ->
         let buffer = pop_output t.call in
         let buffer = Buffer.make t.device shape kind buffer in
         Value.Device buffer
-    | List_type (hd :: tl) ->
+    | hd :: tl ->
         let hd = pop_outputs t hd in
-        let tl = pop_outputs t (List_type tl) in
+        let tl = pop_outputs t tl in
         Value.(hd :: tl)
-    | List_type [] ->
+    | [] ->
         Value.[]
 
   let call t buffers =
@@ -305,16 +324,18 @@ and Value : sig
   type 'a device = |
 
   type (_, _) t =
-    | Host : ('a, 'b) Ir.Tensor.t -> (('a, 'b) Ir.tensor, host) t
-    | Device : ('a, 'b, 'c) Buffer.t -> (('a, 'b) Ir.tensor, 'c device) t
-    | [] : (unit Ir.VarList.t, 'a) t
+    | Host : 'a Ir.Tensor.t -> ('a Ir.Var.u Hlist.element, host) t
+    | Device : ('a, 'b) Buffer.t -> ('a Ir.Var.u Hlist.element, 'b device) t
+    | [] : (unit Hlist.hlist, 'a) t
     | ( :: ) :
-        ('a, 'b) t * ('c Ir.VarList.t, 'b) t
-        -> (('a Ir.Var.t -> 'c) Ir.VarList.t, 'b) t
+        ('a, 'b) t * ('c Hlist.hlist, 'b) t
+        -> (('a -> 'c) Hlist.hlist, 'b) t
 
   val move_to_device : 'a Device.t -> ('b, 'c) t -> ('b, 'a device) t
 
-  val move_to_host : ('a, 'b) t -> ('a, host) t
+  val move_to_host :
+       (('a * 'b) Ir.Var.u Hlist.element, 'c) t
+    -> (('a * 'b) Ir.Var.u Hlist.element, host) t
 
   val value_type : ('a, 'b) t -> 'a Ir.ValueType.t
 
@@ -325,12 +346,12 @@ end = struct
   type 'a device = |
 
   type (_, _) t =
-    | Host : ('a, 'b) Ir.Tensor.t -> (('a, 'b) Ir.tensor, host) t
-    | Device : ('a, 'b, 'c) Buffer.t -> (('a, 'b) Ir.tensor, 'c device) t
-    | [] : (unit Ir.VarList.t, 'a) t
+    | Host : 'a Ir.Tensor.t -> ('a Ir.Var.u Hlist.element, host) t
+    | Device : ('a, 'b) Buffer.t -> ('a Ir.Var.u Hlist.element, 'b device) t
+    | [] : (unit Hlist.hlist, 'a) t
     | ( :: ) :
-        ('a, 'b) t * ('c Ir.VarList.t, 'b) t
-        -> (('a Ir.Var.t -> 'c) Ir.VarList.t, 'b) t
+        ('a, 'b) t * ('c Hlist.hlist, 'b) t
+        -> (('a -> 'c) Hlist.hlist, 'b) t
 
   let rec move_to_device : type a b c. a Device.t -> (b, c) t -> (b, a device) t
       =
@@ -338,7 +359,7 @@ end = struct
     | Host tensor ->
         Device (Buffer.of_tensor device tensor)
     | Device buffer ->
-        Device (Buffer.of_tensor device @@ Buffer.to_tensor buffer)
+        Device (Buffer.move device buffer)
     | [] ->
         []
     | hd :: tl ->
@@ -346,32 +367,34 @@ end = struct
         let tl = move_to_device device tl in
         hd :: tl
 
-  let rec move_to_host : type a b. (a, b) t -> (a, host) t = function
+  let move_to_host :
+      type a b c.
+         ((a * b) Ir.Var.u Hlist.element, c) t
+      -> ((a * b) Ir.Var.u Hlist.element, host) t = function
     | Host tensor ->
         Host tensor
     | Device buffer ->
         Host (Buffer.to_tensor buffer)
-    | [] ->
-        []
-    | hd :: tl ->
-        move_to_host hd :: move_to_host tl
+  (* | [] -> *)
+  (*     [] *)
+  (* | hd :: tl -> *)
+  (*     move_to_host hd :: move_to_host tl *)
 
   let rec value_type : type a b. (a, b) t -> a Ir.ValueType.t = function
     | Host tensor ->
-        Ir.Tensor.value_type tensor
+        E (Ir.Tensor.value_type tensor)
     | Device buffer ->
-        Ir.Tensor.value_type @@ Buffer.to_tensor buffer
+        E (buffer.shape, buffer.kind)
     | [] ->
-        List_type []
+        []
     | hd :: tl ->
-        let (List_type tl) = value_type tl in
-        List_type (value_type hd :: tl)
+        value_type hd :: value_type tl
 
   let rec zeros : type a. a Ir.ValueType.t -> (a, host) t = function
-    | Tensor_type (shape, kind) ->
-        Host (Ir.Tensor.full kind (Ir.zeros kind) shape)
-    | List_type (hd :: tl) ->
-        zeros hd :: zeros (List_type tl)
-    | List_type [] ->
+    | E (shape, kind) ->
+        Host (Ir.Tensor.zeros kind shape)
+    | hd :: tl ->
+        zeros hd :: zeros tl
+    | [] ->
         []
 end

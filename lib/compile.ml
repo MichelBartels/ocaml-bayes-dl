@@ -6,7 +6,7 @@ open C_utils
 let set_hal_target session target =
   let flag = "--iree-hal-target-device=" ^ target in
   let flag_ptr = allocate string flag in
-  C.Functions.session_set_flags session 1 flag_ptr
+  session_set_flags session 1 flag_ptr
 
 let assert_no_error = function
   | Some err ->
@@ -59,7 +59,7 @@ let compile device_str str file =
   invoke_pipeline invocation Std ;
   output_invocation invocation output
 
-let cache_folder = "./.vmfb_cache"
+let cache_folder = Sys.getcwd () ^ "/.vmfb_cache"
 
 let () =
   if not @@ Sys.file_exists cache_folder then Sys.mkdir cache_folder 0o777
@@ -70,5 +70,7 @@ let model_path str =
 
 let get_compiled_model device_str str =
   let path = model_path (device_str ^ str) in
+  print_endline path ;
+  print_endline @@ string_of_bool @@ Sys.file_exists path ;
   if not @@ Sys.file_exists path then compile device_str str path ;
   path

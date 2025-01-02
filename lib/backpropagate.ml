@@ -1,31 +1,24 @@
-(* (input_type, old_output_type, list end, output list) *)
 open Dsl
 
+(* (input_type, old_output_type, list end, output list) *)
 type (_, _, _, _) input =
-  | Var : ('a, 'b, 'c, 'a Ir.Var.t -> 'c) input
+  | Var : ('a, 'b, 'c, 'a -> 'c) input
   | Const : ('a, 'b, 'c, 'c) input
-  | [] : (unit Ir.VarList.t, 'a, 'b, unit Ir.VarList.t Ir.Var.t -> 'b) input
+  | [] : (unit Hlist.hlist, 'a, 'b, unit Hlist.hlist -> 'b) input
   | ( :: ) :
       ('a, 'b, 'c, 'd) input
-      * ('e Ir.VarList.t, 'b, 'f, 'c Ir.VarList.t Ir.Var.t -> 'f) input
-      -> ( ('a Ir.Var.t -> 'e) Ir.VarList.t
-         , 'b
-         , 'f
-         , 'd Ir.VarList.t Ir.Var.t -> 'f )
-         input
+      * ('e Hlist.hlist, 'b, 'f, 'c Hlist.hlist -> 'f) input
+      -> (('a -> 'e) Hlist.hlist, 'b, 'f, 'd Hlist.hlist -> 'f) input
 
 let diff :
     type a b c.
-       (a, b, b Ir.Var.t -> unit, c) input
+       (a, b, b -> unit, c) input
     -> (a Ir.Var.t -> b Ir.Var.t)
     -> a Ir.Var.t
-    -> c Ir.VarList.t Ir.Var.t =
+    -> c Hlist.hlist Ir.Var.t =
  fun l f inputs ->
   let opt_add :
-      type a b.
-         (a, b) Ir.tensor Ir.Var.t option
-      -> (a, b) Ir.tensor Ir.Var.t option
-      -> (a, b) Ir.tensor Ir.Var.t option =
+      type a. a Ir.Var.u option -> a Ir.Var.u option -> a Ir.Var.u option =
    fun x y ->
     match (x, y) with
     | Some x, Some y ->
@@ -36,10 +29,7 @@ let diff :
         None
   in
   let opt_sub :
-      type a b.
-         (a, b) Ir.tensor Ir.Var.t option
-      -> (a, b) Ir.tensor Ir.Var.t option
-      -> (a, b) Ir.tensor Ir.Var.t option =
+      type a. a Ir.Var.u option -> a Ir.Var.u option -> a Ir.Var.u option =
    fun x y ->
     match (x, y) with
     | Some x, Some y ->
@@ -52,7 +42,7 @@ let diff :
         None
   in
   let rec backprop :
-      type a. a Ir.Var.t -> a Ir.Var.t -> int -> a Ir.Var.t option =
+      type a. a Ir.Var.u -> a Ir.Var.u -> int -> a Ir.Var.u option =
    fun v grad x ->
     match v with
     | Ir.Var.Add (v1, v2) ->
@@ -165,8 +155,6 @@ let diff :
              x )
     | Random _ ->
         None
-    | [] | _ :: _ ->
-        failwith "lists cannot be backpropagated"
     | DiffVar (id, _) ->
         if Int.equal id x then Some grad else None
     | DiffConst _ ->
@@ -177,7 +165,7 @@ let diff :
           (backprop v2 (grad *@ (Dsl.zeros_like v1 -@ v1) /@ (v2 *@ v2)) x)
     | BroadcastInDim (var, dims) -> (
       match Ir.ValueType.of_var var with
-      | Ir.ValueType.Tensor_type (_, Ir.F32) ->
+      | _, Ir.F32 ->
           let reduced_grad =
             Dsl.sum (List.init (List.length dims) Fun.id) grad
           in
@@ -241,6 +229,17 @@ let diff :
     | Concatenate _ ->
         failwith "backpropagation of concatenate not implemented"
   in
+  let backprop x y i =
+    Ir.Var.map2
+      { f=
+          (fun x y ->
+            match backprop x y i with
+            | Some d ->
+                d
+            | None ->
+                failwith "output does not depend on input" ) }
+      x y
+  in
   let rec wrap_inputs :
       type a b c d. (a, b, c, d) input -> a Ir.Var.t -> a Ir.Var.t =
    fun l1 l2 ->
@@ -253,48 +252,51 @@ let diff :
         input :: inputs
     | Var, x ->
         Ir.Var.map
-          { fn=
+          { f=
               (fun x ->
                 let id = Ir.new_id () in
                 DiffVar (id, x) ) }
           x
     | Const, x ->
-        Ir.Var.map {fn= (fun x -> DiffConst x)} x
+        Ir.Var.map {f= (fun x -> DiffConst x)} x
   in
-  let rec initial_grad : type a. a Ir.ValueType.t -> a Ir.Var.t = function
-    | Ir.ValueType.Tensor_type _ as t ->
-        Dsl.ones t
-    | List_type t ->
-        let open Hlist.Map (Ir.ValueTypeList) (Ir.VarList) in
-        map {f= initial_grad} t |> Ir.Var.from_var_list
+  let initial_grad t =
+    let open Hlist.Map (Ir.ValueType.List) (Ir.Var.List) in
+    map {f= Dsl.ones} t
   in
-  let assert_same_type : type a b. a Ir.Var.t -> b Ir.Var.t -> b Ir.Var.t =
+  let assert_same_type' : type a b. a Ir.Var.u -> b Ir.Var.u -> b Ir.Var.u =
    fun x y ->
     match (Ir.ValueType.of_var x, Ir.ValueType.of_var y) with
-    | ( Ir.ValueType.Tensor_type (s1, Ir.F32)
-      , Ir.ValueType.Tensor_type (s2, Ir.F32) )
-      when s1 = s2 ->
+    | (s1, Ir.F32), (s2, Ir.F32) when s1 = s2 ->
         x
-    | Ir.ValueType.Tensor_type (s1, Ir.I1), Ir.ValueType.Tensor_type (s2, Ir.I1)
-      when s1 = s2 ->
+    | (s1, Ir.I1), (s2, Ir.I1) when s1 = s2 ->
         x
-    | ( Ir.ValueType.Tensor_type (s1, Ir.I64)
-      , Ir.ValueType.Tensor_type (s2, Ir.I64) )
-      when s1 = s2 ->
+    | (s1, Ir.I64), (s2, Ir.I64) when s1 = s2 ->
         x
-    | Ir.ValueType.Tensor_type _, Ir.ValueType.Tensor_type _ ->
+    | _, _ ->
         failwith "different tensor types"
-        (* TODO: Make this less hacky. Maybe just cast? *)
+   (* TODO: Make this less hacky. Maybe just cast? *)
+  in
+  let rec assert_same_type : type a b. a Ir.Var.t -> b Ir.Var.t -> b Ir.Var.t =
+   fun x y ->
+    match (x, y) with
+    | [], [] ->
+        []
+    | x :: xs, y :: ys ->
+        let x = assert_same_type x y in
+        x :: assert_same_type xs ys
+    | E x, E y ->
+        E (assert_same_type' x y)
     | _ ->
-        failwith "different types"
+        failwith "different type"
   in
   let rec iter_vars :
       type a b c d.
          (a, b, c, d) input
       -> a Ir.Var.t
       -> b Ir.Var.t
-      -> c Ir.VarList.t Ir.Var.t
-      -> d Ir.VarList.t Ir.Var.t =
+      -> c Hlist.hlist Ir.Var.t
+      -> d Hlist.hlist Ir.Var.t =
    fun l inputs outputs next ->
     match (l, inputs) with
     | [], [] ->
@@ -309,19 +311,12 @@ let diff :
         output :: next
     | Var, [] ->
         [] :: next
-    | Var, DiffVar (id, x) ->
-        let initial_grad = initial_grad (Ir.ValueType.of_var outputs) in
+    | Var, E (DiffVar (id, x)) ->
+        let initial_grad = initial_grad (Ir.ValueType.of_vars outputs) in
         let output = backprop outputs initial_grad id in
-        let output =
-          match output with
-          | Some x ->
-              x
-          | None ->
-              failwith "output does not depend on input"
-        in
-        let output = assert_same_type output x in
+        let output = assert_same_type output (E x) in
         output :: next
-    | Const, DiffConst _ ->
+    | Const, E (DiffConst _) ->
         next
     | _ ->
         failwith "should be impossible"

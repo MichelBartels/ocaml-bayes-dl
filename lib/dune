@@ -1,6 +1,6 @@
 (library
  (name iree_bindings)
- (libraries ctypes integers)
+ (libraries ctypes integers progress)
  (ctypes
   (external_library_name iree)
   (build_flags_resolver
