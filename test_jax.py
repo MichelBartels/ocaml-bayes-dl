@@ -99,25 +99,23 @@ def optim(seed, params, x):
     return [*params, opt_state], v
 
 
-num_steps = 25000
+warmup = 20
+num_steps = 100
+from time import time
 
-bar = tqdm(zip(range(num_steps), mnist()), total=num_steps)
+x, _ = next(mnist())
 
-for i, (x, _) in bar:
+times = []
+start = time()
+
+for i in range(num_steps + warmup):
     seed = random.key(i)
-    if i == 0:
-        #input_shapes = [ShapeDtypeStruct(seed.shape, seed.dtype)] + [ShapeDtypeStruct(x.shape, x.dtype) for x in params] + [ShapeDtypeStruct(x.shape, x.dtype)]
-        export.register_namedtuple_serialization(ScaleByAdamState, serialized_name="ScaleByAdamState")
-        export.register_namedtuple_serialization(EmptyState, serialized_name="EmptyState")
-        stable_hlo = export.export(optim)(seed, params, x).mlir_module_serialized
-        with open("train.mlir", "wb") as f:
-            f.write(stable_hlo)
     params, loss = optim(seed, params, x)
-    bar.set_description(f"Loss: {loss}")
-    if (i + 1) % 2500 == 0:
-        seed, mean, _ = encoder(seed, x, *params[:6])
-        _, y_pred = decoder(seed, mean, *params[6:10])
-        plt.imshow(x[0].reshape(28, 28), cmap='gray')
-        plt.show()
-        plt.imshow(y_pred[0].reshape(28, 28), cmap='gray')
-        plt.show()
+    np.array(loss)
+    times.append(time())
+
+times = [times[i] - times[i - 1] for i in range(1, len(times))]
+times = times[warmup - 1:]
+
+print(f"Mean time: {np.mean(times)}")
+print(f"Std time: {np.std(times)}")

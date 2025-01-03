@@ -141,14 +141,16 @@ let train_step =
 (*   let (Host t) = Value.move_to_host t in *)
 (*   Printf.printf "%s\n" (Ir.Tensor.to_string t) *)
 
-let train_step set_msg params x =
+let train_step params x =
   let x = Value.move_to_device device x in
   let [loss; params] = train_step [params; x] in
-  let (Host loss) = Value.move_to_host loss in
-  set_msg @@ Printf.sprintf "Loss: %3.2f" @@ Ir.Tensor.to_scalar loss ;
+  ignore @@ Value.move_to_host loss ;
+  (* set_msg @@ Printf.sprintf "Loss: %3.2f" @@ Ir.Tensor.to_scalar loss ; *)
   params
 
-let num_steps = 25000
+let warmup = 20
+
+let num_steps = 100
 
 (* let () = Gc.set {(Gc.get ()) with minor_heap_size= 262144 * 2048} *)
 
@@ -158,17 +160,37 @@ let train () =
   in
   let dataset = Mnist.load_images Train in
   let generator = Dataset.fixed_iterations num_steps batch_size dataset in
-  let generator, set_msg = Dataset.progress num_steps generator in
-  let train_step = train_step set_msg in
+  let first = Seq.uncons generator |> Option.get |> fst in
+  let generator = Seq.repeat first |> Seq.take (num_steps + warmup) in
+  print_endline "Starting training" ;
+  let times = ref [] in
+  let start = Sys.time () in
+  (* let generator, set_msg = Dataset.progress num_steps generator in *)
   let rec loop params generator =
     match Seq.uncons generator with
     | None ->
         params
     | Some (batch, generator) ->
         (* Gc.major () ; *)
+        times := Sys.time () :: !times ;
         loop (train_step params batch) generator
   in
-  loop params generator
+  ignore @@ loop params generator ;
+  let times =
+    List.fold_right
+      (fun cur (prev, xs) -> (cur, (cur -. prev) :: xs))
+      !times (start, [])
+    |> snd
+  in
+  let times = List.rev times in
+  let times = List.to_seq times |> Seq.drop warmup |> List.of_seq in
+  let mean_time = List.fold_left ( +. ) start times /. float_of_int num_steps in
+  let square_diff =
+    List.map (fun x -> (x -. mean_time) ** 2.) times |> List.fold_left ( +. ) 0.
+  in
+  let std_dev = Float.sqrt @@ (square_diff /. float_of_int (num_steps - 1)) in
+  Printf.printf "Mean time: %3.4f\n" mean_time ;
+  Printf.printf "Standard deviation: %3.4f\n" std_dev
 
 let _ = train ()
 

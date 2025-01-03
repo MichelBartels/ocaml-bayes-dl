@@ -111,7 +111,6 @@ end = struct
     in
     let output_type = Ir.ValueType.of_vars func.outputs in
     let func_str = Ir.compile func in
-    print_endline func_str ;
     let compiled =
       Compile.get_compiled_model (compile_device_str device.kind) func_str
     in

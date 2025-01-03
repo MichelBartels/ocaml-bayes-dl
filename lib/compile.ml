@@ -70,7 +70,5 @@ let model_path str =
 
 let get_compiled_model device_str str =
   let path = model_path (device_str ^ str) in
-  print_endline path ;
-  print_endline @@ string_of_bool @@ Sys.file_exists path ;
   if not @@ Sys.file_exists path then compile device_str str path ;
   path
