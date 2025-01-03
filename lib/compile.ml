@@ -1,11 +1,12 @@
 open C.Functions
 open C.Type
 open Ctypes
+open C_utils
 
 let set_hal_target session target =
   let flag = "--iree-hal-target-device=" ^ target in
   let flag_ptr = allocate string flag in
-  C.Functions.session_set_flags session 1 flag_ptr
+  session_set_flags session 1 flag_ptr
 
 let assert_no_error = function
   | Some err ->
@@ -14,10 +15,7 @@ let assert_no_error = function
   | None ->
       ()
 
-let create_out_param c_type f =
-  let out_ptr = allocate_n (ptr c_type) ~count:1 in
-  let err = f out_ptr in
-  assert_no_error err ; !@out_ptr
+let create_out_param c_type f = create_out_param assert_no_error (ptr c_type) f
 
 let source_from_string session str =
   source_wrap_buffer session "<stdin>" str
@@ -27,7 +25,11 @@ let source_from_string session str =
 
 let create_output file = output_open_file file |> create_out_param output
 
-let create_invocation session =
+let session () = protect session_destroy @@ Option.get @@ session_create ()
+
+let invocation session =
+  protect invocation_destroy
+  @@
   match invocation_create session with
   | Some invocation ->
       invocation
@@ -46,16 +48,29 @@ let output_invocation invocation output =
   let err = invocation_output_vm_bytecode invocation output in
   assert_no_error err
 
-let ( let& ) (x, destructor) f =
-  Fun.protect ~finally:(fun () -> destructor x) (fun () -> f x)
-
-let compile str file =
+let compile device_str str file =
   global_initialize () ;
-  let& session = (session_create () |> Option.get, session_destroy) in
-  set_hal_target session "cuda" ;
+  let session = session () in
+  set_hal_target session device_str ;
   let source = source_from_string session str in
   let output = create_output file in
-  let& invocation = (create_invocation session, invocation_destroy) in
+  let invocation = invocation session in
   parse_source invocation source ;
   invoke_pipeline invocation Std ;
   output_invocation invocation output
+
+let cache_folder = Sys.getcwd () ^ "/.vmfb_cache"
+
+let () =
+  if not @@ Sys.file_exists cache_folder then Sys.mkdir cache_folder 0o777
+
+let model_path str =
+  let hash = Digest.string str |> Digest.to_hex in
+  Filename.concat cache_folder (hash ^ ".vmfb")
+
+let get_compiled_model device_str str =
+  let path = model_path (device_str ^ str) in
+  print_endline path ;
+  print_endline @@ string_of_bool @@ Sys.file_exists path ;
+  if not @@ Sys.file_exists path then compile device_str str path ;
+  path

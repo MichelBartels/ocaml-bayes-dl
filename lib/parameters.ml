@@ -1,80 +1,91 @@
 type ('a, 'b, 'c) inner =
-  { new_param_types: 'b Ir.VarList.t Ir.ValueType.t
-  ; output_type: 'c Ir.ValueType.t
-  ; old_params: 'b Ir.VarList.t Ir.Var.t -> 'a Ir.VarList.t Ir.Var.t
-  ; f: 'b Ir.VarList.t Ir.Var.t -> 'c Ir.Var.t }
+  { output_type: 'c Ir.ValueType.t
+  ; old_params: 'b Hlist.hlist Ir.Var.t -> 'a Hlist.hlist Ir.Var.t
+  ; initial_values: ('b Hlist.hlist, Runtime.Value.host) Runtime.Value.t
+  ; f: 'b Hlist.hlist Ir.Var.t -> 'c Ir.Var.t }
 
-type ('a, 'b, 'c) t = 'a Ir.VarList.t Ir.ValueType.t -> ('a, 'b, 'c) inner
+type ('a, 'b, 'c) t =
+  ('a Hlist.hlist, Runtime.Value.host) Runtime.Value.t -> ('a, 'b, 'c) inner
 
 let return : type a b. a Ir.Var.t -> (b, b, a) t =
- fun x arg_types ->
-  { new_param_types= arg_types
-  ; old_params= Fun.id
-  ; output_type= Ir.ValueType.of_var x
+ fun x initial_values ->
+  { old_params= Fun.id
+  ; output_type= Ir.ValueType.of_vars x
+  ; initial_values
   ; f= (fun _ -> x) }
 
 let bind :
     type a b c d e. (a, b, c) t -> (c Ir.Var.t -> (b, d, e) t) -> (a, d, e) t =
- fun x f arg_types ->
-  let dummy_output = f (Ir.ValueType.to_arg (x arg_types).output_type) in
-  let dummy_inner = dummy_output (x arg_types).new_param_types in
+ fun x f initial_values ->
+  let dummy_output = f (Ir.ValueType.to_arg (x initial_values).output_type) in
+  let dummy_inner = dummy_output (x initial_values).initial_values in
   { dummy_inner with
     f=
       (fun z ->
         let b_param = dummy_inner.old_params z in
-        let a_param = (x arg_types).old_params b_param in
-        let x_inner = x @@ Ir.ValueType.of_var a_param in
+        let x_inner = x initial_values in
         let c = x_inner.f b_param in
         let output = f c in
-        let output_inner = output @@ Ir.ValueType.of_var b_param in
+        let output_inner = output x_inner.initial_values in
         output_inner.f z )
   ; old_params=
       (fun z ->
         let b_param = dummy_inner.old_params z in
-        (x arg_types).old_params b_param ) }
+        (x initial_values).old_params b_param ) }
 
 let ( let* ) = bind
 
-let new_param : type a b. a Ir.ValueType.t -> (b, a Ir.Var.t -> b, a) t =
- fun t (List_type xs) ->
-  { new_param_types= List_type (t :: xs)
+let new_param :
+    type a b. (a, Runtime.Value.host) Runtime.Value.t -> (b, a -> b, a) t =
+ fun t xs ->
+  { initial_values= t :: xs
   ; old_params= (fun (_ :: xs) -> xs)
-  ; output_type= t
+  ; output_type= Runtime.Value.value_type t
   ; f= (fun (x :: _) -> x) }
 
-let to_fun : type a b. (unit, a, b) t -> a Ir.VarList.t Ir.Var.t -> b Ir.Var.t =
- fun x -> (x (List_type [])).f
+let apply : type a b. (unit, a, b) t -> a Hlist.hlist Ir.Var.t -> b Ir.Var.t =
+ fun x -> (x []).f
+
+let initial :
+    type a b c.
+       a Ir.ValueType.t
+    -> (a Ir.Var.t -> (unit, b, c) t)
+    -> (b Hlist.hlist, Runtime.Value.host) Runtime.Value.t =
+ fun t f ->
+  let dummy_x = Ir.ValueType.to_arg t in
+  let dummy_inner = Random.dummy_handler (fun () -> f dummy_x []) in
+  dummy_inner.initial_values
+
+let param_type :
+    type a b c.
+       a Ir.ValueType.t
+    -> (a Ir.Var.t -> (unit, b, c) t)
+    -> b Hlist.hlist Ir.ValueType.t =
+ fun t f -> initial t f |> Runtime.Value.value_type
 
 let grad_and_value :
     type a b c.
-       (a, b, c) t
-    -> (a, b, (b Ir.VarList.t Ir.Var.t -> c Ir.Var.t -> unit) Ir.VarList.t) t =
- fun x arg_type ->
-  let x = x arg_type in
+    (a, b, c) t -> (a, b, (b Hlist.hlist -> c -> unit) Hlist.hlist) t =
+ fun x initial_values ->
+  let x = x initial_values in
   { x with
-    output_type= List_type [x.new_param_types; x.output_type]
+    output_type= [Runtime.Value.value_type x.initial_values; x.output_type]
   ; f= Backpropagate.diff Var x.f }
 
-let params : type a. (a, a, a Ir.VarList.t) t =
- fun arg_type ->
-  { new_param_types= arg_type
+let params : type a. (a, a, a Hlist.hlist) t =
+ fun initial_values ->
+  { initial_values
   ; old_params= Fun.id
-  ; output_type= arg_type
+  ; output_type= Runtime.Value.value_type initial_values
   ; f= Fun.id }
 
 let create_func t f =
-  let dummy_x = Ir.ValueType.to_arg t in
-  let dummy_inner =
-    Random.dummy_handler (fun () -> f dummy_x (Ir.ValueType.List_type []))
-  in
-  let input_types =
-    Ir.ValueType.List_type [dummy_inner.new_param_types; t; Random.seed_type]
-  in
-  Ir.create_func input_types (fun [params; x; seed] ->
+  let param_type = param_type t f in
+  let input_types = Ir.ValueType.List.[param_type; t; E Random.seed_type] in
+  Ir.create_func input_types (fun [params; x; E seed] ->
       Random.handler
         (fun () ->
-          let inner = f x (List_type []) in
-          let y = inner.f params in
+          let y = apply (f x) params in
           let seed = Random.current_seed () in
-          Ir.Var.[y; seed] )
+          Ir.Var.List.[y; E seed] )
         seed )

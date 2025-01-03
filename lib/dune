@@ -1,16 +1,30 @@
 (library
  (name iree_bindings)
- (libraries ctypes)
+ (libraries ctypes integers progress)
  (ctypes
-  (external_library_name libIREECompiler)
+  (external_library_name iree)
   (build_flags_resolver
    (vendored
-    (c_flags :standard -I ../../../c)
-    (c_library_flags :standard -L ../../libs/ -l IREECompiler)))
+    (c_flags :standard -I ../../../c -I ../../../cxx)
+    (c_library_flags
+     :standard
+     -L
+     ../../libs/
+     -l
+     IREECompiler
+     -L
+     ../../libs/
+     -liree_runtime_unified
+     -lflatcc_parsing
+     -lcpuinfo
+     -ldl
+     -lpthread
+     -lstdc++)))
   (headers
    (include
     "iree/compiler/tool_entry_points_api.h"
-    "iree/compiler/embedding_api.h"))
+    "iree/compiler/embedding_api.h"
+    "iree/runtime/api.h"))
   (type_description
    (instance Type)
    (functor Type_description))

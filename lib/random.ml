@@ -1,6 +1,7 @@
 open Dsl
 
-let rotate x n = x >>.> string_of_int n |@ (x <<.> string_of_int (64 - n))
+let rotate x n =
+  x >>.> Unsigned.UInt64.of_int n |@ (x <<.> Unsigned.UInt64.of_int (64 - n))
 
 let squares32 ctr key =
   let x = ctr *@ key in
@@ -11,17 +12,17 @@ let squares32 ctr key =
   let x = (x *@ x) +@ z in
   let x = rotate x 32 in
   let x = (x *@ x) +@ y in
-  (x *@ x) +@ z >>.> "32"
+  (x *@ x) +@ z >>.> Unsigned.UInt64.of_int 32
 
 let random_u64_to_f32 x =
-  let x = x >>.> "9" in
-  let x = x |.> "0x3f800000" in
+  let x = x >>.> Unsigned.UInt64.of_int 9 in
+  let x = x |.> Unsigned.UInt64.of_string "0x3f800000" in
   let f = x |> convert U32 |> bitcast F32 in
   f -.> 1.0
 
 let key = scalar_u64 "0xc8e4fd154ce32f6d"
 
-type _ Effect.t += Counter : int -> Ir.u64 Ir.tensor Ir.Var.t Effect.t
+type _ Effect.t += Counter : int -> (Ir.u64 * Unsigned.uint64) Ir.Var.u Effect.t
 
 let uniform_f32 ?(key = key) shape =
   let total_size = List.fold_left ( * ) 1 shape in
@@ -38,6 +39,7 @@ let uniform_f32 ?(key = key) shape =
 let normal_f32 ?(key = key) shape =
   let size = List.fold_left ( * ) 1 shape in
   let half_size = size / 2 in
+  assert (size mod 2 = 0) ;
   let flat_shape = [half_size] in
   let u0 = uniform_f32 ~key flat_shape in
   let u1 = uniform_f32 ~key flat_shape in
@@ -45,11 +47,11 @@ let normal_f32 ?(key = key) shape =
   let inner = 2.0 *. Float.pi *.< u1 in
   let z_0 = factor *@ sin inner in
   let z_1 = factor *@ cos inner in
-  concat 0 [z_0; z_1] |> reshape shape
+  concat 0 [z_0; z_1] |> reshape shape |> no_grad
 
 let current_seed () = Effect.perform (Counter 0)
 
-let handler f (ctr : Ir.u64 Ir.tensor Ir.Var.t) =
+let handler f (ctr : (Ir.u64 * Unsigned.uint64) Ir.Var.u) =
   let open Effect.Deep in
   let ctr_ref = ref ctr in
   try_with f ()
@@ -67,4 +69,6 @@ let handler f (ctr : Ir.u64 Ir.tensor Ir.Var.t) =
 
 let dummy_handler f = handler f (scalar_u64 "0")
 
-let seed_type = Ir.ValueType.Tensor_type ([], U64)
+let seed_type = ([], Ir.U64)
+
+let initial_seed = Ir.Tensor.scalar_u64 "0"

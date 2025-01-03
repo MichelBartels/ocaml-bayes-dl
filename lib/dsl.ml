@@ -81,22 +81,22 @@ let broadcast_scalar op shape = Ir.Var.BroadcastInDim (op, shape)
 
 let broadcast_scalar_like op var = broadcast_scalar op (Ir.shape_of_var var)
 
-let full value shape =
-  Ir.Var.BroadcastInDim (Ir.Tensor.full value [] |> Ir.Tensor.to_ir, shape)
+let full kind value shape =
+  Ir.Var.BroadcastInDim (Ir.Tensor.full kind value [] |> Ir.Tensor.to_ir, shape)
 
-let full_f32 value = full (F32 value)
+let full_f32 = full F32
 
-let full_i1 value = full (I1 value)
+let full_i1 = full I1
 
-let full_like value var = Ir.shape_of_var var |> full value
+let full_like kind value var = Ir.shape_of_var var |> full kind value
 
-let var_float_op op a b = op a (full_like (F32 b) a)
+let var_float_op op a b = op a (full_like F32 b a)
 
-let float_var_op op a b = op (full_like (F32 a) b) b
+let float_var_op op a b = op (full_like F32 a b) b
 
-let var_u64_op op a b = op a (full_like (U64 b) a)
+let var_u64_op op a b = op a (full_like U64 b a)
 
-let u64_var_op op a b = op (full_like (U64 a) b) b
+let u64_var_op op a b = op (full_like U64 a b) b
 
 let ( +.> ) = var_float_op ( +@ )
 
@@ -158,59 +158,60 @@ let sqrt a = a **.> 0.5
 
 let tanh a = Var.Tanh a
 
-let ones : type a. a Ir.tensor Ir.ValueType.t -> a Ir.tensor Ir.Var.t = function
-  | Tensor_type (shape, F32) ->
-      full (F32 1.) shape
-  | Tensor_type (shape, F64) ->
-      full (F64 1.) shape
-  | Tensor_type (shape, I1) ->
-      full (I1 false) shape
-  | Tensor_type (shape, I64) ->
-      full (I64 1) shape
-  | Tensor_type (shape, U32) ->
-      full (U32 "1") shape
-  | Tensor_type (shape, U64) ->
-      full (U64 "1") shape
+let ones : type a. a Ir.ValueType.u -> a Ir.Var.u = function
+  | shape, F32 ->
+      full F32 1. shape
+  | shape, F64 ->
+      full F64 1. shape
+  | shape, I1 ->
+      full I1 false shape
+  | shape, I64 ->
+      full I64 Signed.Int64.one shape
+  | shape, U32 ->
+      full U32 Unsigned.UInt32.one shape
+  | shape, U64 ->
+      full U64 Unsigned.UInt64.one shape
 
 let ones_like t = ones (Ir.ValueType.of_var t)
 
-let zeros : type a. a Ir.tensor Ir.ValueType.t -> a Ir.tensor Ir.Var.t =
-  function
-  | Tensor_type (shape, F32) ->
-      full (F32 0.) shape
-  | Tensor_type (shape, F64) ->
-      full (F64 0.) shape
-  | Tensor_type (shape, I1) ->
-      full (I1 false) shape
-  | Tensor_type (shape, I64) ->
-      full (I64 0) shape
-  | Tensor_type (shape, U32) ->
-      full (U32 "0") shape
-  | Tensor_type (shape, U64) ->
-      full (U64 "0") shape
+let zeros : type a. a Ir.ValueType.u -> a Ir.Var.u = function
+  | shape, F32 ->
+      full F32 0. shape
+  | shape, F64 ->
+      full F64 0. shape
+  | shape, I1 ->
+      full I1 false shape
+  | shape, I64 ->
+      full I64 Signed.Int64.zero shape
+  | shape, U32 ->
+      full U32 Unsigned.UInt32.zero shape
+  | shape, U64 ->
+      full U64 Unsigned.UInt64.zero shape
 
 let zeros_like t = zeros (Ir.ValueType.of_var t)
 
 let norm mean stddev shape =
   Var.Random
-    ( Ir.ValueType.Tensor_type (shape, F32)
+    ( (shape, F32)
     , mean
     , stddev
-    , Ir.Tensor.from_int_list shape |> Ir.Tensor.to_ir
+    , List.map Signed.Int64.of_int shape
+      |> Ir.Tensor.from_int_list |> Ir.Tensor.to_ir
     , Normal )
 
 let uniform low high shape =
   Var.Random
-    ( Ir.ValueType.Tensor_type (shape, F32)
+    ( (shape, F32)
     , low
     , high
-    , Ir.Tensor.from_int_list shape |> Ir.Tensor.to_ir
+    , List.map Signed.Int64.of_int shape
+      |> Ir.Tensor.from_int_list |> Ir.Tensor.to_ir
     , Uniform )
 
 let sum axes x = Var.Sum (x, axes)
 
 let mean axes x =
-  let (Tensor_type (shape, _)) = Ir.ValueType.of_var x in
+  let shape, _ = Ir.ValueType.of_var x in
   let size =
     List.filteri (fun i _ -> List.mem i axes) shape |> List.fold_left ( * ) 1
   in
@@ -231,34 +232,32 @@ let scalar_f32 = Fun.compose Ir.Tensor.to_ir Ir.Tensor.scalar_f32
 
 let scalar_u64 = Fun.compose Ir.Tensor.to_ir Ir.Tensor.scalar_u64
 
-let assert_float_fn (f : Ir.f32 Ir.tensor Ir.Var.t -> Ir.f32 Ir.tensor Ir.Var.t)
+let assert_float_fn (f : (Ir.f32 * float) Ir.Var.u -> (Ir.f32 * float) Ir.Var.u)
     : Ir.Var.map_fn =
-  let fn : type a. a Ir.tensor Ir.Var.t -> a Ir.tensor Ir.Var.t =
+  let f : type a. a Ir.Var.u -> a Ir.Var.u =
    fun x ->
     match Ir.ValueType.of_var x with
-    | Ir.ValueType.Tensor_type (_, F32) ->
+    | _, F32 ->
         f x
     | _ ->
         failwith "assert_float_map: unsupported type"
   in
-  {fn}
+  {f}
 
 let assert_float2_fn
     (f :
-         Ir.f32 Ir.tensor Ir.Var.t
-      -> Ir.f32 Ir.tensor Ir.Var.t
-      -> Ir.f32 Ir.tensor Ir.Var.t ) : Ir.Var.map2_fn =
-  let fn :
-      type a.
-      a Ir.tensor Ir.Var.t -> a Ir.tensor Ir.Var.t -> a Ir.tensor Ir.Var.t =
+         (Ir.f32 * float) Ir.Var.u
+      -> (Ir.f32 * float) Ir.Var.u
+      -> (Ir.f32 * float) Ir.Var.u ) : Ir.Var.map2_fn =
+  let f : type a. a Ir.Var.u -> a Ir.Var.u -> a Ir.Var.u =
    fun x y ->
     match Ir.ValueType.of_var x with
-    | Ir.ValueType.Tensor_type (_, F32) ->
+    | _, F32 ->
         f x y
     | _ ->
         failwith "assert_float_map: unsupported type"
   in
-  {fn}
+  {f}
 
 let float_map f = Ir.Var.map (assert_float_fn f)
 
