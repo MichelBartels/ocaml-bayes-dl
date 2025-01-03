@@ -5,13 +5,11 @@ let () = Printexc.record_backtrace true
 
 let sigmoid x = (tanh (x /.> 2.0) +.> 1.0) /.> 2.0
 
-let batch_size = 32
+let batch_size = 128
 
 let reparametrize mean var shape =
   let eps = Random.normal_f32 shape in
-  (* let eps = *)
-  (*   norm (zeros (Tensor_type ([], F32))) (ones (Tensor_type ([], F32))) shape *)
-  (* in *)
+  (* let eps = norm (zeros ([], F32)) (ones ([], F32)) shape in *)
   (* let eps = zeros (Tensor_type (shape, F32)) in *)
   mean +@ (eps *@ var)
 
@@ -150,7 +148,9 @@ let train_step set_msg params x =
   set_msg @@ Printf.sprintf "Loss: %3.2f" @@ Ir.Tensor.to_scalar loss ;
   params
 
-let num_steps = 100000
+let num_steps = 25000
+
+(* let () = Gc.set {(Gc.get ()) with minor_heap_size= 262144 * 2048} *)
 
 let train () =
   let params =
@@ -165,6 +165,7 @@ let train () =
     | None ->
         params
     | Some (batch, generator) ->
+        (* Gc.major () ; *)
         loop (train_step params batch) generator
   in
   loop params generator

@@ -1194,8 +1194,8 @@ let create_func :
 let func_to_stable_hlo (func : ('a, 'b) Func.t) =
   let outputs, ops = vars_to_ops func.outputs in
   let ops = List.filter_map (fun x -> x) ops in
-  let inputs = ValueType.to_stable_hlo func.inputs in
-  let inputs = List.combine func.parameter_names inputs |> List.rev in
+  let inputs = ValueType.to_stable_hlo func.inputs |> List.rev in
+  let inputs = List.combine func.parameter_names inputs in
   let outputs = List.rev outputs in
   let return_ops = annotated_values_to_return_op outputs in
   let outputs = List.map snd outputs in

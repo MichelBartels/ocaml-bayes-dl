@@ -41,7 +41,12 @@ let progress total seq =
   let iteration_printer =
     Printer.create ~to_string:(Format.sprintf "%2.2fit") ~string_len:9 ()
   in
-  let bar = Line.(rate iteration_printer ++ bar total) in
+  let bar =
+    Line.(
+      rate iteration_printer ++ spacer 2
+      ++ bar ?style:(Some `UTF8) total
+      ++ spacer 2 ++ count_to total ++ spacer 2 ++ eta total )
+  in
   let info = Line.(rpad 13 string) in
   let bar = Multi.(line bar ++ line info) in
   let display = Display.start bar in

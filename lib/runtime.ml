@@ -111,6 +111,7 @@ end = struct
     in
     let output_type = Ir.ValueType.of_vars func.outputs in
     let func_str = Ir.compile func in
+    print_endline func_str ;
     let compiled =
       Compile.get_compiled_model (compile_device_str device.kind) func_str
     in
@@ -131,7 +132,8 @@ and Buffer : sig
     { view: buffer_view structure Ctypes_static.ptr
     ; shape: int list
     ; device: 'b Device.t
-    ; kind: 'a Ir.tensor }
+    ; kind: 'a Ir.tensor
+    ; mutable collected: bool }
 
   val make :
        'b Device.t
@@ -150,12 +152,15 @@ and Buffer : sig
   val to_tensor : ('a * 'b, 'c) t -> ('a * 'b) Ir.Tensor.t
 
   val move : 'a Device.t -> ('b, 'c) t -> ('b, 'a) t
+
+  val collect : ('a, 'b) t -> unit
 end = struct
   type ('a, 'b) t =
     { view: buffer_view structure Ctypes_static.ptr
     ; shape: int list
     ; device: 'b Device.t
-    ; kind: 'a Ir.tensor }
+    ; kind: 'a Ir.tensor
+    ; mutable collected: bool }
 
   let buffer_params =
     let p = make buffer_params in
@@ -163,8 +168,6 @@ end = struct
     setf p buffer_access memory_access_all ;
     setf p buffer_memory_type memory_type_device_local ;
     p
-
-  let make device shape kind view = {view; shape; device; kind}
 
   let iree_element_type : type a. a Ir.tensor -> Unsigned.uint32 = function
     | F32 ->
@@ -180,6 +183,15 @@ end = struct
     | U64 ->
         element_type_uint_64
 
+  let collect buffer =
+    if not buffer.collected then (
+      (* if false then ( *)
+      buffer.collected <- true ;
+      buffer_view_release buffer.view )
+
+  let make device shape kind view =
+    protect collect {view; shape; device; kind; collected= false}
+
   let of_carray device element_type shape kind arr =
     let data_ptr = CArray.start arr |> to_voidp in
     let size = List.fold_left ( * ) 1 shape in
@@ -189,16 +201,17 @@ end = struct
     let rank = Unsigned.Size_t.of_int (CArray.length shape_arr) in
     let shape_ptr = CArray.start shape_arr in
     let size = size * sizeof element_type |> Unsigned.Size_t.of_int in
-    { view=
-        protect buffer_view_release
-        @@ create_out_param (ptr buffer_view)
-        @@ buffer_view_allocate_buffer_copy device.Device.device
-             device.allocator rank shape_ptr (iree_element_type kind)
-             encoding_type_dense_row_major buffer_params
-        @@ make_const_byte_span data_ptr size
-    ; shape
-    ; device
-    ; kind }
+    protect collect
+      { view=
+          create_out_param (ptr buffer_view)
+          @@ buffer_view_allocate_buffer_copy device.Device.device
+               device.allocator rank shape_ptr (iree_element_type kind)
+               encoding_type_dense_row_major buffer_params
+          @@ make_const_byte_span data_ptr size
+      ; shape
+      ; device
+      ; kind
+      ; collected= false }
 
   let of_float_list device shape data =
     let arr = CArray.of_list float data in
@@ -250,6 +263,7 @@ end = struct
     let arr = to_carray buffer in
     let shape = buffer.shape in
     let kind = buffer.kind in
+    collect buffer ;
     Ir.Tensor.from_carray kind shape arr
 end
 
@@ -280,8 +294,7 @@ end = struct
     {call; device; output_type}
 
   let pop_output call =
-    protect buffer_view_release
-    @@ create_out_param (ptr buffer_view)
+    create_out_param (ptr buffer_view)
     @@ call_outputs_pop_front_buffer_view @@ addr call
 
   let rec push_inputs :
@@ -294,6 +307,15 @@ end = struct
         ()
     | Value.(hd :: tl) ->
         push_inputs t hd ; push_inputs t tl
+
+  let rec collect_inputs : type a b. (a, b Value.device) Value.t -> unit =
+    function
+    | Value.Device buffer ->
+        Buffer.collect buffer
+    | Value.[] ->
+        ()
+    | Value.(hd :: tl) ->
+        collect_inputs hd ; collect_inputs tl
 
   let rec pop_outputs :
       type a b c d.
@@ -313,6 +335,7 @@ end = struct
   let call t buffers =
     push_inputs t buffers ;
     assert_no_error @@ call_invoke (addr t.call) (Unsigned.UInt32.of_int 0) ;
+    collect_inputs buffers ;
     let outputs = pop_outputs t t.output_type in
     call_reset (addr t.call) ;
     outputs
