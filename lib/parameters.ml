@@ -1,11 +1,10 @@
 type ('a, 'b, 'c) inner =
   { output_type: 'c Ir.ValueType.t
   ; old_params: 'b Hlist.hlist Ir.Var.t -> 'a Hlist.hlist Ir.Var.t
-  ; initial_values: ('b Hlist.hlist, Runtime.Value.host) Runtime.Value.t
+  ; initial_values: 'b Hlist.hlist Runtime.HostValue.t
   ; f: 'b Hlist.hlist Ir.Var.t -> 'c Ir.Var.t }
 
-type ('a, 'b, 'c) t =
-  ('a Hlist.hlist, Runtime.Value.host) Runtime.Value.t -> ('a, 'b, 'c) inner
+type ('a, 'b, 'c) t = 'a Hlist.hlist Runtime.HostValue.t -> ('a, 'b, 'c) inner
 
 let return : type a b. a Ir.Var.t -> (b, b, a) t =
  fun x initial_values ->
@@ -35,12 +34,11 @@ let bind :
 
 let ( let* ) = bind
 
-let new_param :
-    type a b. (a, Runtime.Value.host) Runtime.Value.t -> (b, a -> b, a) t =
+let new_param : type a b. a Runtime.HostValue.t -> (b, a -> b, a) t =
  fun t xs ->
   { initial_values= t :: xs
   ; old_params= (fun (_ :: xs) -> xs)
-  ; output_type= Runtime.Value.value_type t
+  ; output_type= Runtime.HostValue.value_type t
   ; f= (fun (x :: _) -> x) }
 
 let apply : type a b. (unit, a, b) t -> a Hlist.hlist Ir.Var.t -> b Ir.Var.t =
@@ -50,7 +48,7 @@ let initial :
     type a b c.
        a Ir.ValueType.t
     -> (a Ir.Var.t -> (unit, b, c) t)
-    -> (b Hlist.hlist, Runtime.Value.host) Runtime.Value.t =
+    -> b Hlist.hlist Runtime.HostValue.t =
  fun t f ->
   let dummy_x = Ir.ValueType.to_arg t in
   let dummy_inner = Random.dummy_handler (fun () -> f dummy_x []) in
@@ -61,7 +59,7 @@ let param_type :
        a Ir.ValueType.t
     -> (a Ir.Var.t -> (unit, b, c) t)
     -> b Hlist.hlist Ir.ValueType.t =
- fun t f -> initial t f |> Runtime.Value.value_type
+ fun t f -> initial t f |> Runtime.HostValue.value_type
 
 let grad_and_value :
     type a b c.
@@ -69,14 +67,14 @@ let grad_and_value :
  fun x initial_values ->
   let x = x initial_values in
   { x with
-    output_type= [Runtime.Value.value_type x.initial_values; x.output_type]
+    output_type= [Runtime.HostValue.value_type x.initial_values; x.output_type]
   ; f= Backpropagate.diff Var x.f }
 
 let params : type a. (a, a, a Hlist.hlist) t =
  fun initial_values ->
   { initial_values
   ; old_params= Fun.id
-  ; output_type= Runtime.Value.value_type initial_values
+  ; output_type= Runtime.HostValue.value_type initial_values
   ; f= Fun.id }
 
 let create_func t f =

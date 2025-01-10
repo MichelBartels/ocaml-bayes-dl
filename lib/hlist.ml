@@ -1,63 +1,60 @@
 type !'a hlist = |
 
-type !'a element = |
+type (!'a, !'b) element = |
 
 module type S = sig
-  type 'a u
-
-  type !'a v
+  type ('a, 'b) u
 
   type _ t =
     | [] : unit hlist t
     | ( :: ) : 'a t * 'b hlist t -> ('a -> 'b) hlist t
-    | E : 'a u -> 'a v element t
+    | E : ('a, 'b) u -> ('a, 'b) element t
 
   val length : 'a hlist t -> int
 
-  type map_fn = {f: 'a. 'a u -> 'a u}
+  type map_fn = {f: 'a 'b. ('a, 'b) u -> ('a, 'b) u}
 
   val map : map_fn -> 'a t -> 'a t
 
-  type 'a map2_fn = {f: 'b. 'b u -> 'a -> 'b u}
+  type 'a map2_fn = {f: 'b 'c. ('b, 'c) u -> 'a -> ('b, 'c) u}
 
   val map2 : 'a map2_fn -> 'b t -> 'a list -> 'b t
 
-  type 'b map2_acc_fn = {f: 'a. 'a u -> 'a u -> 'b -> 'a u * 'b}
+  type 'a map2_acc_fn =
+    {f: 'b 'c. ('b, 'c) u -> ('b, 'c) u -> 'a -> ('b, 'c) u * 'a}
 
   val map2_acc : 'b map2_acc_fn -> 'a t -> 'a t -> 'b -> 'a t * 'b
 
-  type 'a fold_fn = {f: 'b. 'a -> 'b u -> 'a}
+  type 'a fold_fn = {f: 'b 'c. 'a -> ('b, 'c) u -> 'a}
 
   val fold_left : 'a fold_fn -> 'a -> 'b t -> 'a
 
-  type 'a map_to_list_fn = {f: 'b. 'b u -> 'a}
+  type 'a map_to_list_fn = {f: 'b 'c. ('b, 'c) u -> 'a}
 
   val map_to_list : 'a map_to_list_fn -> 'b t -> 'a list
 
-  type ('a, 'b) map2_to_list_fn = {f: 'c. 'c u -> 'a -> 'b}
+  type ('a, 'b) map2_to_list_fn = {f: 'c 'd. ('c, 'd) u -> 'a -> 'b}
 
   val map2_to_list : ('a, 'b) map2_to_list_fn -> 'c t -> 'a list -> 'b list
 
-  type any = Any : 'a u -> any
+  type any = Any : ('a, 'b) u -> any
 
   val to_any_list : 'a t -> any list
 
-  val unwrap : 'a v element t -> 'a u
+  val unwrap : ('a, 'b) element t -> ('a, 'b) u
+
+  val num_elements : 'a t -> int
 end
 
 module Make (T : sig
-  type 'a t
-
-  type !'a tag
-end) : S with type 'a u = 'a T.t and type 'a v = 'a T.tag = struct
-  type 'a u = 'a T.t
-
-  type 'a v = 'a T.tag
+  type ('a, 'b) t
+end) : S with type ('a, 'b) u = ('a, 'b) T.t = struct
+  type ('a, 'b) u = ('a, 'b) T.t
 
   type _ t =
     | [] : unit hlist t
     | ( :: ) : 'a t * 'b hlist t -> ('a -> 'b) hlist t
-    | E : 'a u -> 'a v element t
+    | E : ('a, 'b) u -> ('a, 'b) element t
 
   let rec length : type a. a hlist t -> int = function
     | [] ->
@@ -65,7 +62,8 @@ end) : S with type 'a u = 'a T.t and type 'a v = 'a T.tag = struct
     | _ :: xs ->
         1 + length xs
 
-  type 'b map2_acc_fn = {f: 'a. 'a u -> 'a u -> 'b -> 'a u * 'b}
+  type 'a map2_acc_fn =
+    {f: 'b 'c. ('b, 'c) u -> ('b, 'c) u -> 'a -> ('b, 'c) u * 'a}
 
   let rec map2_acc : type a b. b map2_acc_fn -> a t -> a t -> b -> a t * b =
    fun f l1 l2 acc ->
@@ -80,13 +78,13 @@ end) : S with type 'a u = 'a T.t and type 'a v = 'a T.tag = struct
         let x, acc = f.f x y acc in
         (E x, acc)
 
-  type map_fn = {f: 'a. 'a T.t -> 'a u}
+  type map_fn = {f: 'a 'b. ('a, 'b) u -> ('a, 'b) u}
 
   let rec map : type a. map_fn -> a t -> a t =
    fun f l ->
     match l with [] -> [] | x :: xs -> map f x :: map f xs | E x -> E (f.f x)
 
-  type 'a map2_fn = {f: 'b. 'b T.t -> 'a -> 'b T.t}
+  type 'a map2_fn = {f: 'b 'c. ('b, 'c) u -> 'a -> ('b, 'c) u}
 
   let map2 : type a b. a map2_fn -> b t -> a list -> b t =
    fun f l1 l2 ->
@@ -107,7 +105,7 @@ end) : S with type 'a u = 'a T.t and type 'a v = 'a T.tag = struct
     in
     match inner f l1 l2 with l, [] -> l | _ -> raise error
 
-  type 'a fold_fn = {f: 'b. 'a -> 'b T.t -> 'a}
+  type 'a fold_fn = {f: 'b 'c. 'a -> ('b, 'c) u -> 'a}
 
   let rec fold_left : type a b. b fold_fn -> b -> a t -> b =
    fun f acc l ->
@@ -120,11 +118,11 @@ end) : S with type 'a u = 'a T.t and type 'a v = 'a T.tag = struct
     | E x ->
         f.f acc x
 
-  type 'a map_to_list_fn = {f: 'b. 'b T.t -> 'a}
+  type 'a map_to_list_fn = {f: 'b 'c. ('b, 'c) u -> 'a}
 
   let map_to_list f l = fold_left {f= (fun acc x -> List.cons (f.f x) acc)} [] l
 
-  type ('a, 'b) map2_to_list_fn = {f: 'c. 'c u -> 'a -> 'b}
+  type ('a, 'b) map2_to_list_fn = {f: 'c 'd. ('c, 'd) u -> 'a -> 'b}
 
   let map2_to_list f l1 l2 =
     fold_left
@@ -132,7 +130,7 @@ end) : S with type 'a u = 'a T.t and type 'a v = 'a T.tag = struct
       ([], l2) l1
     |> fst
 
-  type any = Any : 'a T.t -> any
+  type any = Any : ('a, 'b) u -> any
 
   let rec to_any_list : type a. a t -> any list = function
     | x :: xs ->
@@ -142,11 +140,19 @@ end) : S with type 'a u = 'a T.t and type 'a v = 'a T.tag = struct
     | E x ->
         [Any x]
 
-  let unwrap : type a. a v element t -> a u = function E x -> x
+  let unwrap : type a b. (a, b) element t -> (a, b) u = function E x -> x
+
+  let rec num_elements : type a. a t -> int = function
+    | [] ->
+        0
+    | x :: xs ->
+        num_elements x + num_elements xs
+    | E _ ->
+        1
 end
 
-module Map (L1 : S) (L2 : S with type 'a v = 'a L1.v) = struct
-  type map_fn = {f: 'a. 'a L1.u -> 'a L2.u}
+module Map (L1 : S) (L2 : S) = struct
+  type map_fn = {f: 'a 'b. ('a, 'b) L1.u -> ('a, 'b) L2.u}
 
   let rec map : type a. map_fn -> a L1.t -> a L2.t =
    fun f l ->

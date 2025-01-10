@@ -81,8 +81,10 @@ let broadcast_scalar op shape = Ir.Var.BroadcastInDim (op, shape)
 
 let broadcast_scalar_like op var = broadcast_scalar op (Ir.shape_of_var var)
 
+let tensor_to_ir tensor = Ir.Var.Constant tensor
+
 let full kind value shape =
-  Ir.Var.BroadcastInDim (Ir.Tensor.full kind value [] |> Ir.Tensor.to_ir, shape)
+  Ir.Var.BroadcastInDim (Ir.Tensor.scalar kind value |> tensor_to_ir, shape)
 
 let full_f32 = full F32
 
@@ -158,7 +160,7 @@ let sqrt a = a **.> 0.5
 
 let tanh a = Var.Tanh a
 
-let ones : type a. a Ir.ValueType.u -> a Ir.Var.u = function
+let ones : type a b. (a, b) Ir.ValueType.u -> (a, b) Ir.Var.u = function
   | shape, F32 ->
       full F32 1. shape
   | shape, F64 ->
@@ -174,7 +176,7 @@ let ones : type a. a Ir.ValueType.u -> a Ir.Var.u = function
 
 let ones_like t = ones (Ir.ValueType.of_var t)
 
-let zeros : type a. a Ir.ValueType.u -> a Ir.Var.u = function
+let zeros : type a b. (a, b) Ir.ValueType.u -> (a, b) Ir.Var.u = function
   | shape, F32 ->
       full F32 0. shape
   | shape, F64 ->
@@ -196,7 +198,8 @@ let norm mean stddev shape =
     , mean
     , stddev
     , List.map Signed.Int64.of_int shape
-      |> Ir.Tensor.from_int_list |> Ir.Tensor.to_ir
+      |> Ir.Tensor.of_list I64 [List.length shape]
+      |> tensor_to_ir
     , Normal )
 
 let uniform low high shape =
@@ -205,7 +208,8 @@ let uniform low high shape =
     , low
     , high
     , List.map Signed.Int64.of_int shape
-      |> Ir.Tensor.from_int_list |> Ir.Tensor.to_ir
+      |> Ir.Tensor.of_list I64 [List.length shape]
+      |> tensor_to_ir
     , Uniform )
 
 let sum axes x = Var.Sum (x, axes)
@@ -228,13 +232,15 @@ let transpose var permutation =
   then failwith "Invalid permutation" ;
   Var.Transpose (var, permutation)
 
-let scalar_f32 = Fun.compose Ir.Tensor.to_ir Ir.Tensor.scalar_f32
+let scalar_f32 = Fun.compose tensor_to_ir @@ Ir.Tensor.scalar F32
 
-let scalar_u64 = Fun.compose Ir.Tensor.to_ir Ir.Tensor.scalar_u64
+let scalar_u64 str =
+  tensor_to_ir @@ Ir.Tensor.scalar U64 @@ Unsigned.UInt64.of_string str
 
-let assert_float_fn (f : (Ir.f32 * float) Ir.Var.u -> (Ir.f32 * float) Ir.Var.u)
-    : Ir.Var.map_fn =
-  let f : type a. a Ir.Var.u -> a Ir.Var.u =
+let assert_float_fn
+    (f : (Ir.Tensor.f32, float) Ir.Var.u -> (Ir.Tensor.f32, float) Ir.Var.u) :
+    Ir.Var.map_fn =
+  let f : type a b. (a, b) Ir.Var.u -> (a, b) Ir.Var.u =
    fun x ->
     match Ir.ValueType.of_var x with
     | _, F32 ->
@@ -246,10 +252,10 @@ let assert_float_fn (f : (Ir.f32 * float) Ir.Var.u -> (Ir.f32 * float) Ir.Var.u)
 
 let assert_float2_fn
     (f :
-         (Ir.f32 * float) Ir.Var.u
-      -> (Ir.f32 * float) Ir.Var.u
-      -> (Ir.f32 * float) Ir.Var.u ) : Ir.Var.map2_fn =
-  let f : type a. a Ir.Var.u -> a Ir.Var.u -> a Ir.Var.u =
+         (Ir.Tensor.f32, float) Ir.Var.u
+      -> (Ir.Tensor.f32, float) Ir.Var.u
+      -> (Ir.Tensor.f32, float) Ir.Var.u ) : Ir.Var.map2_fn =
+  let f : type a b. (a, b) Ir.Var.u -> (a, b) Ir.Var.u -> (a, b) Ir.Var.u =
    fun x y ->
     match Ir.ValueType.of_var x with
     | _, F32 ->

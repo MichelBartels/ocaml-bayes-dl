@@ -12,9 +12,9 @@ let adamw ?(lr = 0.001) ?(betas = (0.9, 0.999)) ?(eps = 1e-08)
   let* [grad; loss] = grad_and_value f in
   let* params = params in
   let beta1, beta2 = betas in
-  let* (E t) = new_param (Host (Ir.Tensor.scalar_f32 1.)) in
-  let* m = new_param (Runtime.Value.zeros (Ir.ValueType.of_vars params)) in
-  let* v = new_param (Runtime.Value.zeros (Ir.ValueType.of_vars params)) in
+  let* (E t) = new_param (E (Ir.Tensor.scalar_f32 1.)) in
+  let* m = new_param (Runtime.HostValue.zeros (Ir.ValueType.of_vars params)) in
+  let* v = new_param (Runtime.HostValue.zeros (Ir.ValueType.of_vars params)) in
   let params =
     float_map2 (fun p g -> p -@ (g *.> (lr *. weight_decay))) params grad
   in

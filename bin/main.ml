@@ -20,8 +20,8 @@ let kl mean logvar var =
 
 let bayesian_parameter shape =
   let open Parameters in
-  let* (E mean) = new_param (Runtime.Value.zeros (E (shape, F32))) in
-  let* (E var) = new_param (Host (Ir.Tensor.full F32 0.001 shape)) in
+  let* (E mean) = new_param (Runtime.HostValue.zeros (E (shape, F32))) in
+  let* (E var) = new_param (E (Ir.Tensor.full F32 shape 0.001)) in
   let mean = Ir.Var.BroadcastInDim (mean, [batch_size]) in
   let var = Ir.Var.BroadcastInDim (var, [batch_size]) in
   let loss = kl mean (ln (var *.> 1000.)) (var *.> 1000.) in
@@ -126,15 +126,19 @@ let train x = optim (vae x)
 (*   Runtime.simple_mul () ; *)
 (*   print_endline @@ Compile.get_compiled_model main_compiled *)
 
+module Device =
+  ( val Pjrt_bindings.make
+          "/home/michel/part-ii-project/xla/bazel-bin/xla/pjrt/c/pjrt_c_api_gpu_plugin.so"
+    )
+
+module Runtime = Runtime.Make (Device)
 open Runtime
 
-let device = Device.make Cuda
-
-let input_type = ([batch_size; 1; 784], Ir.F32)
+let input_type = ([batch_size; 1; 784], Ir.Tensor.F32)
 
 let train_step =
   let param_type = Parameters.param_type (E input_type) train in
-  Device.compile device [param_type; E input_type]
+  compile [param_type; E input_type]
   @@ fun [params; x] -> Parameters.apply (train x) params
 
 (* let print_tensor t = *)
@@ -142,10 +146,10 @@ let train_step =
 (*   Printf.printf "%s\n" (Ir.Tensor.to_string t) *)
 
 let train_step set_msg params x =
-  let x = Value.move_to_device device x in
+  let x = DeviceValue.of_host_value x in
   let [loss; params] = train_step [params; x] in
-  let (Host loss) = Value.move_to_host loss in
-  set_msg @@ Printf.sprintf "Loss: %3.2f" @@ Ir.Tensor.to_scalar loss ;
+  let (E loss) = DeviceValue.to_host_value loss in
+  set_msg @@ Printf.sprintf "Loss: %3.2f" @@ List.hd @@ Ir.Tensor.to_list loss ;
   params
 
 let num_steps = 25000
@@ -154,7 +158,7 @@ let num_steps = 25000
 
 let train () =
   let params =
-    Parameters.initial (E input_type) train |> Value.move_to_device device
+    Parameters.initial (E input_type) train |> DeviceValue.of_host_value
   in
   let dataset = Mnist.load_images Train in
   let generator = Dataset.fixed_iterations num_steps batch_size dataset in
