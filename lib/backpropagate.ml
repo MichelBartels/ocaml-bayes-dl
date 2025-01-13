@@ -10,15 +10,13 @@ type (_, _, _, _) input =
       * ('e Hlist.hlist, 'b, 'f, 'c Hlist.hlist -> 'f) input
       -> (('a -> 'e) Hlist.hlist, 'b, 'f, 'd Hlist.hlist -> 'f) input
 
-let diff :
-    type a b c.
+let diff : type a b c.
        (a, b, b -> unit, c) input
     -> (a Ir.Var.t -> b Ir.Var.t)
     -> a Ir.Var.t
     -> c Hlist.hlist Ir.Var.t =
  fun l f inputs ->
-  let opt_add :
-      type a b.
+  let opt_add : type a b.
       (a, b) Ir.Var.u option -> (a, b) Ir.Var.u option -> (a, b) Ir.Var.u option
       =
    fun x y ->
@@ -30,8 +28,7 @@ let diff :
     | None, None ->
         None
   in
-  let opt_sub :
-      type a b.
+  let opt_sub : type a b.
       (a, b) Ir.Var.u option -> (a, b) Ir.Var.u option -> (a, b) Ir.Var.u option
       =
    fun x y ->
@@ -45,8 +42,7 @@ let diff :
     | None, None ->
         None
   in
-  let rec backprop :
-      type a b.
+  let rec backprop : type a b.
       (a, b) Ir.Var.u -> (a, b) Ir.Var.u -> int -> (a, b) Ir.Var.u option =
    fun v grad x ->
     match v with
@@ -106,8 +102,7 @@ let diff :
                   | None ->
                       List.length var_batching_dims
                       + List.length var_contracting_dims
-                      + (List.find_index (( = ) i) var_rem_dims |> Option.get) )
-                )
+                      + (List.find_index (( = ) i) var_rem_dims |> Option.get) ) )
               var_shape
           in
           let grad_shape = Ir.shape_of_var grad in
@@ -245,8 +240,8 @@ let diff :
                 failwith "output does not depend on input" ) }
       x y
   in
-  let rec wrap_inputs :
-      type a b c d. (a, b, c, d) input -> a Ir.Var.t -> a Ir.Var.t =
+  let rec wrap_inputs : type a b c d.
+      (a, b, c, d) input -> a Ir.Var.t -> a Ir.Var.t =
    fun l1 l2 ->
     match (l1, l2) with
     | [], [] ->
@@ -269,8 +264,8 @@ let diff :
     let open Hlist.Map (Ir.ValueType.List) (Ir.Var.List) in
     map {f= Dsl.ones} t
   in
-  let assert_same_type' :
-      type a b c d. (a, b) Ir.Var.u -> (c, d) Ir.Var.u -> (c, d) Ir.Var.u =
+  let assert_same_type' : type a b c d.
+      (a, b) Ir.Var.u -> (c, d) Ir.Var.u -> (c, d) Ir.Var.u =
    fun x y ->
     match (Ir.ValueType.of_var x, Ir.ValueType.of_var y) with
     | (s1, F32), (s2, F32) when s1 = s2 ->
@@ -296,8 +291,7 @@ let diff :
     | _ ->
         failwith "different type"
   in
-  let rec iter_vars :
-      type a b c d.
+  let rec iter_vars : type a b c d.
          (a, b, c, d) input
       -> a Ir.Var.t
       -> b Ir.Var.t
@@ -330,3 +324,5 @@ let diff :
   let inputs = wrap_inputs l inputs in
   let outputs = f inputs in
   iter_vars l inputs outputs [outputs]
+
+let grad_and_value f = diff Var f

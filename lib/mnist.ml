@@ -33,3 +33,29 @@ let load_images t =
       img :: loop (i + 1)
   in
   ([1; 784], List.to_seq @@ loop 0)
+
+let plot (img : (Ir.Tensor.f32, float) Ir.Tensor.t) =
+  let open Graphics in
+  let scale = 50 in
+  let w = 28 * scale in
+  let h = 28 * scale in
+  open_graph @@ " " ^ string_of_int w ^ "x" ^ string_of_int h ;
+  set_window_title "MNIST" ;
+  let open Ir.Tensor in
+  clear_graph () ;
+  set_color black ;
+  fill_rect 0 0 w h ;
+  for i = 0 to 27 do
+    for j = 0 to 27 do
+      let x = i * scale in
+      let y = j * scale in
+      let v = get img [0; 0; (y * 28) + x] in
+      let colour = int_of_float (255. *. (1. -. v)) in
+      set_color (rgb colour colour colour) ;
+      fill_rect x y scale scale
+    done
+  done ;
+  print_endline "Press any key to continue" ;
+  ignore @@ read_key () ;
+  close_graph () ;
+  print_endline "Continuing..."

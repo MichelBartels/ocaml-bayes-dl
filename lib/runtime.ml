@@ -28,7 +28,9 @@ module Make (Device : Device_api.S) = struct
     type ('a, 'b) t =
       {buffer: Device.buffer; shape: int list; kind: ('a, 'b) Ir.Tensor.kind}
 
-    let make buffer shape kind = {buffer; shape; kind}
+    let make buffer shape kind =
+      let buffer = {buffer; shape; kind} in
+      buffer
 
     let of_tensor tensor =
       let shape = Ir.Tensor.shape tensor in
@@ -63,23 +65,33 @@ module Make (Device : Device_api.S) = struct
 
     let rec to_host_value : type a. a t -> a HostValue.t = function
       | E buffer ->
-          E (Buffer.to_tensor buffer)
+          let v = Buffer.to_tensor buffer in
+          Device.collect_buffer buffer.buffer ;
+          E v
       | [] ->
           []
       | hd :: tl ->
           to_host_value hd :: to_host_value tl
   end
 
-  module Function = struct
+  module Function : sig
+    type ('a, 'b) t
+
+    val make :
+      Device.program -> 'a Ir.ValueType.t -> 'b Ir.ValueType.t -> ('a, 'b) t
+
+    val call :
+      ('a, 'b) t -> ?collect:bool -> 'a DeviceValue.t -> 'b DeviceValue.t
+  end = struct
     type ('a, 'b) t =
       {program: Device.program; output_type: 'b Ir.ValueType.t; num_outputs: int}
 
-    let make program output_type =
+    let make program _ output_type =
       let num_outputs = Ir.ValueType.List.num_elements output_type in
       {program; output_type; num_outputs}
 
-    let rec flatten_inputs :
-        type a. Device.buffer list -> a DeviceValue.t -> Device.buffer list =
+    let rec flatten_inputs : type a.
+        Device.buffer list -> a DeviceValue.t -> Device.buffer list =
      fun acc -> function
       | E buffer ->
           buffer.buffer :: acc
@@ -88,16 +100,7 @@ module Make (Device : Device_api.S) = struct
       | hd :: tl ->
           flatten_inputs (flatten_inputs acc hd) tl
 
-    (* let rec collect_inputs : type a b. (a, b device) Value.t -> unit = function *)
-    (*   | Value.Device buffer -> *)
-    (*       Buffer.collect buffer *)
-    (*   | Value.[] -> *)
-    (*       () *)
-    (*   | Value.(hd :: tl) -> *)
-    (*       collect_inputs hd ; collect_inputs tl *)
-
-    let rec nest_outputs :
-        type a.
+    let rec nest_outputs : type a.
            Device.buffer list
         -> a Ir.ValueType.t
         -> a DeviceValue.t * Device.buffer list =
@@ -119,12 +122,13 @@ module Make (Device : Device_api.S) = struct
       | [] ->
           ([], buffers)
 
-    let call t buffers =
+    let call t ?(collect = true) buffers =
       let buffers = flatten_inputs [] buffers in
       let buffers = List.rev buffers in
       let outputs =
         Device.execute ~num_outputs:t.num_outputs t.program buffers
       in
+      if collect then List.iter Device.collect_buffer buffers ;
       let outputs, _ = nest_outputs outputs t.output_type in
       outputs
   end
@@ -149,19 +153,18 @@ module Make (Device : Device_api.S) = struct
     in
     let output_type = Ir.ValueType.of_vars func.outputs in
     let func_str = Ir.compile func in
-    print_endline func_str ;
     let model_path = model_path func_str in
     let program =
       if Sys.file_exists model_path then Device.load ~path:model_path
       else Device.compile_and_store ~program:func_str ~path:model_path
     in
-    let func = Function.make program output_type in
+    let func = Function.make program input_type output_type in
     let seed =
       ref @@ DeviceValue.of_host_value
       @@ HostValue.E (Ir.Tensor.scalar U64 @@ Unsigned.UInt64.of_int 0)
     in
-    fun inputs ->
-      let [y; seed'] = Function.call func [inputs; !seed] in
+    fun ?collect inputs ->
+      let [y; seed'] = Function.call func ?collect [inputs; !seed] in
       seed := seed' ;
       y
 end

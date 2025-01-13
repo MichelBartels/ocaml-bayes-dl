@@ -42,7 +42,8 @@ let progress total seq =
     Line.(
       rate iteration_printer ++ spacer 2
       ++ bar ?style:(Some `UTF8) total
-      ++ spacer 2 ++ count_to total ++ spacer 2 ++ eta total )
+      ++ spacer 2 ++ count_to total ++ spacer 2 ++ eta total ++ spacer 2
+      ++ elapsed () )
   in
   let info = Line.(rpad 13 string) in
   let bar = Multi.(line bar ++ line info) in
