@@ -9,58 +9,12 @@ let new_id () =
 
 let tag x = (string_of_int @@ new_id (), x)
 
-type f32 = F32
-
-type i1 = I1
-
-type i64 = I64
-
-type u32 = U32
-
-type u64 = U64
-
-type f64 = F64
-
-type _ tensor =
-  | F32 : (f32 * float) tensor
-  | F64 : (f64 * float) tensor
-  | I1 : (i1 * bool) tensor
-  | I64 : (i64 * Signed.Int64.t) tensor
-  | U32 : (u32 * Unsigned.uint32) tensor
-  | U64 : (u64 * Unsigned.uint64) tensor
-
-let zeros : type a b. (a * b) tensor -> b = function
-  | F32 ->
-      0.0
-  | F64 ->
-      0.0
-  | I1 ->
-      false
-  | I64 ->
-      Signed.Int64.zero
-  | U32 ->
-      Unsigned.UInt32.zero
-  | U64 ->
-      Unsigned.UInt64.zero
-
-let ones : type a b. (a * b) tensor -> b = function
-  | F32 ->
-      1.0
-  | F64 ->
-      1.0
-  | I1 ->
-      true
-  | I64 ->
-      Signed.Int64.one
-  | U32 ->
-      Unsigned.UInt32.one
-  | U64 ->
-      Unsigned.UInt64.one
-
 type shape = int list
 
+module Tensor = Device_api.Tensor
+
 let tensor_element_type_to_stable_hlo :
-    type a. a tensor -> Stable_hlo.tensor_element_type = function
+    type a b. (a, b) Tensor.kind -> Stable_hlo.tensor_element_type = function
   | F32 ->
       Stable_hlo.F32
   | I1 ->
@@ -99,133 +53,135 @@ let attribute_of_comparison_direction direction =
 type distribution = Uniform | Normal
 
 module rec Var : sig
-  type _ u =
-    | Add : 'a u * 'a u -> 'a u
-    | Subtract : 'a u * 'a u -> 'a u
-    | Multiply : 'a u * 'a u -> 'a u
-    | Divide : 'a u * 'a u -> 'a u
-    | Abs : 'a u -> 'a u
-    | Ln : 'a u -> 'a u
-    | Exponential : 'a u -> 'a u
-    | Pow : 'a u * 'a u -> 'a u
-    | Argument : id * 'a ValueType.u -> 'a u
-    | Compare : 'a u * comparison_direction * 'a u -> (i1 * bool) u
-    | Min : 'a u * 'a u -> 'a u
-    | Max : 'a u * 'a u -> 'a u
-    | Constant : ('a * 'b) Tensor.t -> ('a * 'b) u
+  type (_, _) u =
+    | Add : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Subtract : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Multiply : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Divide : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Abs : ('a, 'b) u -> ('a, 'b) u
+    | Ln : ('a, 'b) u -> ('a, 'b) u
+    | Exponential : ('a, 'b) u -> ('a, 'b) u
+    | Pow : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Argument : id * ('a, 'b) ValueType.u -> ('a, 'b) u
+    | Compare :
+        ('a, 'b) u * comparison_direction * ('a, 'b) u
+        -> (Tensor.i1, bool) u
+    | Min : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Max : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Constant : ('a, 'b) Tensor.t -> ('a, 'b) u
     | DotProduct :
-        'a u * 'a u * int list * int list * int list * int list
-        -> 'a u
+        ('a, 'b) u * ('a, 'b) u * int list * int list * int list * int list
+        -> ('a, 'b) u
     | Random :
-        'a ValueType.u
-        * (f32 * float) u
-        * (f32 * float) u
-        * (i64 * Signed.Int64.t) u
+        ('a, 'b) ValueType.u
+        * (Tensor.f32, float) u
+        * (Tensor.f32, float) u
+        * (Tensor.i64, Signed.Int64.t) u
         * distribution
-        -> 'a u
-    | DiffVar : id * 'a u -> 'a u
-    | DiffConst : 'a u -> 'a u
-    | BroadcastInDim : 'a u * int list -> 'a u
-    | Transpose : 'a u * int list -> 'a u
-    | Tanh : 'a u -> 'a u
-    | Sum : (f32 * float) u * int list -> (f32 * float) u
+        -> ('a, 'b) u
+    | DiffVar : id * ('a, 'b) u -> ('a, 'b) u
+    | DiffConst : ('a, 'b) u -> ('a, 'b) u
+    | BroadcastInDim : ('a, 'b) u * int list -> ('a, 'b) u
+    | Transpose : ('a, 'b) u * int list -> ('a, 'b) u
+    | Tanh : ('a, 'b) u -> ('a, 'b) u
+    | Sum : (Tensor.f32, float) u * int list -> (Tensor.f32, float) u
     | RightShift :
-        (u64 * Unsigned.uint64) u * (u64 * Unsigned.uint64) u
-        -> (u64 * Unsigned.uint64) u
+        (Tensor.u64, Unsigned.uint64) u * (Tensor.u64, Unsigned.uint64) u
+        -> (Tensor.u64, Unsigned.uint64) u
     | LeftShift :
-        (u64 * Unsigned.uint64) u * (u64 * Unsigned.uint64) u
-        -> (u64 * Unsigned.uint64) u
-    | Bitcast : 'a u * ('c * 'd) tensor -> ('c * 'd) u
-    | Convert : 'a u * ('c * 'd) tensor -> ('c * 'd) u
-    | NoGrad : 'a u -> 'a u
+        (Tensor.u64, Unsigned.uint64) u * (Tensor.u64, Unsigned.uint64) u
+        -> (Tensor.u64, Unsigned.uint64) u
+    | Bitcast : ('a, 'b) u * ('c, 'd) Tensor.kind -> ('c, 'd) u
+    | Convert : ('a, 'b) u * ('c, 'd) Tensor.kind -> ('c, 'd) u
+    | NoGrad : ('a, 'b) u -> ('a, 'b) u
     | Or :
-        (u64 * Unsigned.uint64) u * (u64 * Unsigned.uint64) u
-        -> (u64 * Unsigned.uint64) u
-    | Iota : int * int list -> (u64 * Unsigned.uint64) u
-    | Reshape : 'a u * int list -> 'a u
-    | Sin : 'a u -> 'a u
-    | Cos : 'a u -> 'a u
-    | Concatenate : 'a u list * int -> 'a u
+        (Tensor.u64, Unsigned.uint64) u * (Tensor.u64, Unsigned.uint64) u
+        -> (Tensor.u64, Unsigned.uint64) u
+    | Iota : int * int list -> (Tensor.u64, Unsigned.uint64) u
+    | Reshape : ('a, 'b) u * int list -> ('a, 'b) u
+    | Sin : ('a, 'b) u -> ('a, 'b) u
+    | Cos : ('a, 'b) u -> ('a, 'b) u
+    | Concatenate : ('a, 'b) u list * int -> ('a, 'b) u
 
-  module List : Hlist.S with type 'a u = 'a u and type 'a v = 'a u
+  module List : Hlist.S with type ('a, 'b) u = ('a, 'b) u
 
   type 'a t = 'a List.t
 
   val to_annotated_values : 'a t -> (string * Stable_hlo.value_type) list
 
-  val to_annotated_value : 'a u -> string * Stable_hlo.value_type
+  val to_annotated_value : ('a, 'b) u -> string * Stable_hlo.value_type
 
   val length : 'a Var.t -> int
 
   val get_args : 'a Var.t -> id list
 
-  type map2_fn = {f: 'a. 'a u -> 'a u -> 'a u}
+  type map2_fn = {f: 'a 'b. ('a, 'b) u -> ('a, 'b) u -> ('a, 'b) u}
 
   val map2 : map2_fn -> 'a t -> 'a t -> 'a t
 
   type 'a map2_acc_fn = 'a List.map2_acc_fn
 
-  type 'b map_acc_fn = {f: 'a. 'a u -> 'b -> 'a u * 'b}
+  type 'a map_acc_fn = {f: 'b 'c. ('b, 'c) u -> 'a -> ('b, 'c) u * 'a}
 
   val map_acc : 'b map_acc_fn -> 'a t -> 'b -> 'a t * 'b
 
-  type map_fn = {f: 'a. 'a u -> 'a u}
+  type map_fn = {f: 'a 'b. ('a, 'b) u -> ('a, 'b) u}
 
   val map : map_fn -> 'a t -> 'a t
 end = struct
-  type _ u =
-    | Add : 'a u * 'a u -> 'a u
-    | Subtract : 'a u * 'a u -> 'a u
-    | Multiply : 'a u * 'a u -> 'a u
-    | Divide : 'a u * 'a u -> 'a u
-    | Abs : 'a u -> 'a u
-    | Ln : 'a u -> 'a u
-    | Exponential : 'a u -> 'a u
-    | Pow : 'a u * 'a u -> 'a u
-    | Argument : id * 'a ValueType.u -> 'a u
-    | Compare : 'a u * comparison_direction * 'a u -> (i1 * bool) u
-    | Min : 'a u * 'a u -> 'a u
-    | Max : 'a u * 'a u -> 'a u
-    | Constant : ('a * 'b) Tensor.t -> ('a * 'b) u
+  type (_, _) u =
+    | Add : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Subtract : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Multiply : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Divide : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Abs : ('a, 'b) u -> ('a, 'b) u
+    | Ln : ('a, 'b) u -> ('a, 'b) u
+    | Exponential : ('a, 'b) u -> ('a, 'b) u
+    | Pow : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Argument : id * ('a, 'b) ValueType.u -> ('a, 'b) u
+    | Compare :
+        ('a, 'b) u * comparison_direction * ('a, 'b) u
+        -> (Tensor.i1, bool) u
+    | Min : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Max : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Constant : ('a, 'b) Tensor.t -> ('a, 'b) u
     | DotProduct :
-        'a u * 'a u * int list * int list * int list * int list
-        -> 'a u
+        ('a, 'b) u * ('a, 'b) u * int list * int list * int list * int list
+        -> ('a, 'b) u
     | Random :
-        'a ValueType.u
-        * (f32 * float) u
-        * (f32 * float) u
-        * (i64 * Signed.Int64.t) u
+        ('a, 'b) ValueType.u
+        * (Tensor.f32, float) u
+        * (Tensor.f32, float) u
+        * (Tensor.i64, Signed.Int64.t) u
         * distribution
-        -> 'a u
-    | DiffVar : id * 'a u -> 'a u
-    | DiffConst : 'a u -> 'a u
-    | BroadcastInDim : 'a u * int list -> 'a u
-    | Transpose : 'a u * int list -> 'a u
-    | Tanh : 'a u -> 'a u
-    | Sum : (f32 * float) u * int list -> (f32 * float) u
+        -> ('a, 'b) u
+    | DiffVar : id * ('a, 'b) u -> ('a, 'b) u
+    | DiffConst : ('a, 'b) u -> ('a, 'b) u
+    | BroadcastInDim : ('a, 'b) u * int list -> ('a, 'b) u
+    | Transpose : ('a, 'b) u * int list -> ('a, 'b) u
+    | Tanh : ('a, 'b) u -> ('a, 'b) u
+    | Sum : (Tensor.f32, float) u * int list -> (Tensor.f32, float) u
     | RightShift :
-        (u64 * Unsigned.uint64) u * (u64 * Unsigned.uint64) u
-        -> (u64 * Unsigned.uint64) u
+        (Tensor.u64, Unsigned.uint64) u * (Tensor.u64, Unsigned.uint64) u
+        -> (Tensor.u64, Unsigned.uint64) u
     | LeftShift :
-        (u64 * Unsigned.uint64) u * (u64 * Unsigned.uint64) u
-        -> (u64 * Unsigned.uint64) u
-    | Bitcast : 'a u * ('c * 'd) tensor -> ('c * 'd) u
-    | Convert : 'a u * ('c * 'd) tensor -> ('c * 'd) u
-    | NoGrad : 'a u -> 'a u
+        (Tensor.u64, Unsigned.uint64) u * (Tensor.u64, Unsigned.uint64) u
+        -> (Tensor.u64, Unsigned.uint64) u
+    | Bitcast : ('a, 'b) u * ('c, 'd) Tensor.kind -> ('c, 'd) u
+    | Convert : ('a, 'b) u * ('c, 'd) Tensor.kind -> ('c, 'd) u
+    | NoGrad : ('a, 'b) u -> ('a, 'b) u
     | Or :
-        (u64 * Unsigned.uint64) u * (u64 * Unsigned.uint64) u
-        -> (u64 * Unsigned.uint64) u
-    | Iota : int * int list -> (u64 * Unsigned.uint64) u
-    | Reshape : 'a u * int list -> 'a u
-    | Sin : 'a u -> 'a u
-    | Cos : 'a u -> 'a u
-    | Concatenate : 'a u list * int -> 'a u
+        (Tensor.u64, Unsigned.uint64) u * (Tensor.u64, Unsigned.uint64) u
+        -> (Tensor.u64, Unsigned.uint64) u
+    | Iota : int * int list -> (Tensor.u64, Unsigned.uint64) u
+    | Reshape : ('a, 'b) u * int list -> ('a, 'b) u
+    | Sin : ('a, 'b) u -> ('a, 'b) u
+    | Cos : ('a, 'b) u -> ('a, 'b) u
+    | Concatenate : ('a, 'b) u list * int -> ('a, 'b) u
 
-  module VarList : Hlist.S with type 'a u = 'a u and type 'a v = 'a u =
+  module VarList : Hlist.S with type ('a, 'b) u = ('a, 'b) u =
   Hlist.Make (struct
-    type 'a t = 'a u
-
-    type 'a tag = 'a u
+    type ('a, 'b) t = ('a, 'b) u
   end)
 
   type 'a t = 'a VarList.t
@@ -260,7 +216,7 @@ end = struct
     | _ ->
         failwith "expected nested list of arguments"
 
-  type map2_fn = {f: 'a. 'a u -> 'a u -> 'a u}
+  type map2_fn = {f: 'a 'b. ('a, 'b) u -> ('a, 'b) u -> ('a, 'b) u}
 
   type 'a map2_acc_fn = 'a VarList.map2_acc_fn
 
@@ -269,12 +225,12 @@ end = struct
   let map2 ({f} : map2_fn) a b =
     map2_acc {f= (fun a b () -> (f a b, ()))} a b () |> fst
 
-  type 'b map_acc_fn = {f: 'a. 'a u -> 'b -> 'a u * 'b}
+  type 'a map_acc_fn = {f: 'b 'c. ('b, 'c) u -> 'a -> ('b, 'c) u * 'a}
 
   let map_acc ({f} : 'a map_acc_fn) a acc =
     map2_acc {f= (fun a _ acc -> f a acc)} a a acc
 
-  type map_fn = {f: 'a. 'a u -> 'a u}
+  type map_fn = {f: 'a 'b. ('a, 'b) u -> ('a, 'b) u}
 
   let map ({f} : map_fn) a = map2 {f= (fun a _ -> f a)} a a
 
@@ -282,29 +238,29 @@ end = struct
 end
 
 and ValueType : sig
-  type 'a u = shape * 'a tensor
+  type ('a, 'b) u = shape * ('a, 'b) Tensor.kind
 
-  module List : Hlist.S with type 'a u = 'a u and type 'a v = 'a Var.u
+  module List : Hlist.S with type ('a, 'b) u = ('a, 'b) u
 
   type 'a t = 'a List.t
 
-  val tensor_to_stable_hlo : 'a u -> Stable_hlo.value_type
+  val tensor_to_stable_hlo : ('a, 'b) u -> Stable_hlo.value_type
 
   val to_stable_hlo : 'a t -> Stable_hlo.value_type list
 
-  val of_var : 'a Var.u -> 'a u
+  val of_var : ('a, 'b) Var.u -> ('a, 'b) u
 
   val of_vars : 'a Var.t -> 'a t
 
+  val of_tensor : ('a, 'b) Tensor.t -> ('a, 'b) u
+
   val to_arg : 'a t -> 'a Var.t
 end = struct
-  type 'a u = shape * 'a tensor
+  type ('a, 'b) u = shape * ('a, 'b) Tensor.kind
 
-  module ValueTypeList :
-    Hlist.S with type 'a u = 'a u and type 'a v = 'a Var.u = Hlist.Make (struct
-    type 'a t = 'a u
-
-    type 'a tag = 'a Var.u
+  module ValueTypeList : Hlist.S with type ('a, 'b) u = ('a, 'b) u =
+  Hlist.Make (struct
+    type ('a, 'b) t = ('a, 'b) u
   end)
 
   type 'a t = 'a ValueTypeList.t
@@ -315,7 +271,26 @@ end = struct
 
   let to_stable_hlo l = ValueTypeList.map_to_list {f= tensor_to_stable_hlo} l
 
-  let rec of_var : type a. a Var.u -> a u = function
+  let of_tensor : type a b. (a, b) Tensor.t -> (a, b) u =
+   fun t ->
+    let shape = Tensor.shape t in
+    let kind = Tensor.kind t in
+    ( shape
+    , match kind with
+      | F32 ->
+          F32
+      | I1 ->
+          I1
+      | I64 ->
+          I64
+      | U32 ->
+          U32
+      | U64 ->
+          U64
+      | F64 ->
+          F64 )
+
+  let rec of_var : type a b. (a, b) Var.u -> (a, b) u = function
     | Add (lhs, _) ->
         of_var lhs
     | Subtract (lhs, _) ->
@@ -342,7 +317,7 @@ end = struct
     | Max (lhs, _) ->
         of_var lhs
     | Constant t ->
-        Tensor.value_type t
+        of_tensor t
     | DotProduct
         ( lhs
         , rhs
@@ -457,209 +432,6 @@ end = struct
     ; name: string }
 end
 
-and Tensor : sig
-  type 'a t
-
-  val c_type : ('a * 'b) tensor -> 'b Ctypes.typ
-
-  type any_typ = Any : 'a Ctypes.typ -> any_typ
-
-  val any_c_type : 'a tensor -> any_typ
-
-  val kind : 'a t -> 'a tensor
-
-  val full : ('a * 'b) tensor -> 'b -> int list -> ('a * 'b) t
-
-  val value_type : 'a t -> 'a ValueType.u
-
-  val get : ('a * 'b) t -> int list -> 'b
-
-  val shape : ('a * 'b) t -> shape
-
-  val to_string : ('a * 'b) t -> string
-
-  val to_ir : ('a * 'b) t -> ('a * 'b) Var.u
-
-  val from_int_list :
-    ?shape:shape -> Signed.Int64.t list -> (i64 * Signed.Int64.t) t
-
-  val from_float_list : ?shape:shape -> float list -> (f32 * float) t
-
-  val from_carray :
-    ('a * 'b) tensor -> shape -> 'b Ctypes.CArray.t -> ('a * 'b) t
-
-  val scalar_f32 : float -> (f32 * float) t
-
-  val scalar_u64 : string -> (u64 * Unsigned.uint64) t
-
-  val carray : ('a * 'b) t -> 'b Ctypes.CArray.t
-
-  type any_carray = Any : 'a Ctypes.CArray.t -> any_carray
-
-  val any_carray : 'a t -> any_carray
-
-  val to_scalar : ('a * 'b) t -> 'b
-
-  val zeros : 'a tensor -> int list -> 'a t
-end = struct
-  open Ctypes
-
-  let value_to_string : type a b. (a * b) tensor -> b -> string =
-   fun kind v ->
-    match (kind, v) with
-    | F32, v ->
-        Printf.sprintf "%e" v
-    | F64, v ->
-        Printf.sprintf "%e" v
-    | I1, b ->
-        string_of_bool b
-    | I64, i ->
-        Signed.Int64.to_string i
-    | U32, i ->
-        Unsigned.UInt32.to_string i
-    | U64, i ->
-        Unsigned.UInt64.to_string i
-
-  type ('a, 'b) t' =
-    {kind: ('a * 'b) tensor; arr: 'b Ctypes.CArray.t; shape: int list}
-
-  type 'a t = Tensor : ('a, 'b) t' -> ('a * 'b) t
-
-  let kind : type a. a t -> a tensor = fun (Tensor {kind; _}) -> kind
-
-  type any_typ = Any : 'a typ -> any_typ
-
-  let c_type : type a b. (a * b) tensor -> b typ = function
-    | F32 ->
-        float
-    | F64 ->
-        double
-    | I1 ->
-        bool
-    | I64 ->
-        int64_t
-    | U32 ->
-        uint32_t
-    | U64 ->
-        uint64_t
-
-  let any_c_type : type a. a tensor -> any_typ = function
-    | F32 ->
-        Any float
-    | F64 ->
-        Any double
-    | I1 ->
-        Any bool
-    | I64 ->
-        Any int64_t
-    | U32 ->
-        Any uint32_t
-    | U64 ->
-        Any uint64_t
-
-  type any_carray = Any : 'a Ctypes.CArray.t -> any_carray
-
-  let any_carray : type a. a t -> any_carray = function
-    | Tensor {arr; _} ->
-        Any arr
-
-  let full : type a b. (a * b) tensor -> b -> int list -> (a * b) t =
-   fun kind initial shape ->
-    let size = List.fold_left ( * ) 1 shape in
-    Tensor {kind; arr= CArray.make ~initial (c_type kind) size; shape}
-
-  let zeros : type a. a tensor -> int list -> a t =
-   fun kind shape ->
-    match kind with
-    | F32 ->
-        full kind 0.0 shape
-    | F64 ->
-        full kind 0.0 shape
-    | I1 ->
-        full kind false shape
-    | I64 ->
-        full kind Signed.Int64.zero shape
-    | U32 ->
-        full kind Unsigned.UInt32.zero shape
-    | U64 ->
-        full kind Unsigned.UInt64.zero shape
-
-  let value_type : type a. a t -> a ValueType.u =
-   fun (Tensor {kind; shape; _}) ->
-    match kind with
-    | F32 ->
-        (shape, F32)
-    | F64 ->
-        (shape, F64)
-    | I1 ->
-        (shape, I1)
-    | I64 ->
-        (shape, I64)
-    | U32 ->
-        (shape, U32)
-    | U64 ->
-        (shape, U64)
-
-  let calc_index = List.fold_left2 (fun acc i j -> (acc * i) + j) 0
-
-  let get : type a b. (a * b) t -> int list -> b =
-   fun (Tensor t) idx -> CArray.get t.arr (calc_index t.shape idx)
-
-  let shape (Tensor {shape; _}) = shape
-
-  type 'a values = Tensor of 'a values Seq.t | Value of 'a
-
-  let values t =
-    let shape = shape t in
-    let rec values' shape acc =
-      match shape with
-      | [] ->
-          Value (get t (List.rev acc))
-      | x :: xs ->
-          Tensor (Seq.init x (fun i -> values' xs (i :: acc)))
-    in
-    values' shape []
-
-  let to_string (Tensor t : 'a t) =
-    let rec values_to_string = function
-      | Tensor s ->
-          "["
-          ^ (Seq.map values_to_string s |> List.of_seq |> String.concat ", ")
-          ^ "]"
-      | Value v ->
-          value_to_string t.kind v
-    in
-    let data = values_to_string (values (Tensor t)) in
-    let signature =
-      Stable_hlo.value_type_to_string
-        (value_type (Tensor t) |> ValueType.tensor_to_stable_hlo)
-    in
-    Printf.sprintf "dense<%s> : %s" data signature
-
-  let to_ir t = Var.Constant t
-
-  let from_list ?shape (kind : ('a * 'b) tensor) list : ('a * 'b) t =
-    Tensor
-      { kind
-      ; arr= CArray.of_list (c_type kind) list
-      ; shape= Option.value shape ~default:[List.length list] }
-
-  let from_int_list ?shape = from_list ?shape I64
-
-  let from_float_list ?shape = from_list ?shape F32
-
-  let scalar_f32 f = full F32 f []
-
-  let scalar_u64 s = full U64 (Unsigned.UInt64.of_string s) []
-
-  let carray (Tensor {arr; _} : ('a * 'b) t) = arr
-
-  let from_carray (kind : ('a * 'b) tensor) shape arr : ('a * 'b) t =
-    Tensor {kind; arr; shape}
-
-  let to_scalar t = get t (List.map (fun _ -> 0) (shape t))
-end
-
 let shape_of_var var = ValueType.of_var var |> function shape, _ -> shape
 
 module AnnotatedValueSet = Set.Make (struct
@@ -668,7 +440,7 @@ module AnnotatedValueSet = Set.Make (struct
   let compare = Stdlib.compare
 end)
 
-type any_var = Any_var : 'a Var.u -> any_var
+type any_var = Any_var : ('a, 'b) Var.u -> any_var
 
 module VarMap = struct
   type 'a t = (any_var * 'a) list
@@ -687,10 +459,10 @@ end
 
 let vars_to_ops vars =
   let rec aux :
-      type a.
+      type a b.
          Stable_hlo.annotated_value list
          * (Stable_hlo.op option * Stable_hlo.annotated_value) VarMap.t
-      -> a Var.u
+      -> (a, b) Var.u
       -> Stable_hlo.annotated_value list
          * (Stable_hlo.op option * Stable_hlo.annotated_value) VarMap.t =
    fun (prev_outputs, cache) var ->
@@ -852,14 +624,20 @@ let vars_to_ops vars =
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
-      | Constant repr ->
+      | Constant tensor ->
           let output = Var.to_annotated_value var in
+          let repr = Tensor.to_string tensor in
+          let signature =
+            Stable_hlo.value_type_to_string @@ ValueType.tensor_to_stable_hlo
+            @@ ValueType.of_tensor tensor
+          in
+          let repr = Printf.sprintf "dense<%s> : %s" repr signature in
           let op =
             Stable_hlo.
               { inputs= []
               ; outputs= [output]
               ; name= "stablehlo.constant"
-              ; attributes= [("value", Tensor.to_string repr)]
+              ; attributes= [("value", repr)]
               ; anonymous_functions= []
               ; call= false }
           in
@@ -1189,7 +967,7 @@ let create_func :
   let outputs = body args in
   let parameter_names = Var.get_args args in
   let parameter_names = List.map string_of_int parameter_names in
-  {inputs; parameter_names; outputs; name= "fn" ^ string_of_int (new_id ())}
+  {inputs; parameter_names; outputs; name= "main"}
 
 let func_to_stable_hlo (func : ('a, 'b) Func.t) =
   let outputs, ops = vars_to_ops func.outputs in

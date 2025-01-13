@@ -24,10 +24,7 @@ let batch n (shape, seq) =
   (n :: shape, inner n seq)
 
 let to_elements (shape, l) =
-  Seq.map
-    (fun l ->
-      Runtime.Value.Host (Ir.Tensor.from_float_list ?shape:(Some shape) l) )
-    l
+  Seq.map (fun l -> Runtime.HostValue.E (Ir.Tensor.of_list F32 shape l)) l
 
 let epoch batch_size (shape, l) =
   let l = shuffle l in
@@ -45,7 +42,8 @@ let progress total seq =
     Line.(
       rate iteration_printer ++ spacer 2
       ++ bar ?style:(Some `UTF8) total
-      ++ spacer 2 ++ count_to total ++ spacer 2 ++ eta total )
+      ++ spacer 2 ++ count_to total ++ spacer 2 ++ eta total ++ spacer 2
+      ++ elapsed () )
   in
   let info = Line.(rpad 13 string) in
   let bar = Multi.(line bar ++ line info) in
