@@ -1,6 +1,13 @@
 (library
  (name iree_bindings)
- (libraries ctypes integers progress device_api pjrt_bindings graphics)
+ (libraries
+  ctypes
+  integers
+  progress
+  device_api
+  pjrt_bindings
+  graphics
+  domainslib)
  (ctypes
   (external_library_name iree)
   (build_flags_resolver

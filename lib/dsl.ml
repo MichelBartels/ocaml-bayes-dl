@@ -83,8 +83,7 @@ let broadcast_scalar_like op var = broadcast_scalar op (Ir.shape_of_var var)
 
 let tensor_to_ir tensor = Ir.Var.Constant tensor
 
-let full kind value shape =
-  Ir.Var.BroadcastInDim (Ir.Tensor.scalar kind value |> tensor_to_ir, shape)
+let full kind value shape = Ir.Var.BroadcastScalarConstant ((shape, kind), value)
 
 let full_f32 = full F32
 
@@ -232,10 +231,9 @@ let transpose var permutation =
   then failwith "Invalid permutation" ;
   Var.Transpose (var, permutation)
 
-let scalar_f32 = Fun.compose tensor_to_ir @@ Ir.Tensor.scalar F32
+let scalar_f32 x = full F32 x []
 
-let scalar_u64 str =
-  tensor_to_ir @@ Ir.Tensor.scalar U64 @@ Unsigned.UInt64.of_string str
+let scalar_u64 str = full U64 (Unsigned.UInt64.of_string str) []
 
 let assert_float_fn
     (f : (Ir.Tensor.f32, float) Ir.Var.u -> (Ir.Tensor.f32, float) Ir.Var.u) :

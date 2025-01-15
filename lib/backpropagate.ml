@@ -72,6 +72,8 @@ let diff : type a b c.
         failwith "cannot differentiate max"
     | Constant _ ->
         None
+    | BroadcastScalarConstant _ ->
+        None
     | DotProduct
         ( lhs
         , rhs

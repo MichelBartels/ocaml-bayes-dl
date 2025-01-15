@@ -13,8 +13,8 @@ type shape = int list
 
 module Tensor = Device_api.Tensor
 
-let tensor_element_type_to_stable_hlo :
-    type a b. (a, b) Tensor.kind -> Stable_hlo.tensor_element_type = function
+let tensor_element_type_to_stable_hlo : type a b.
+    (a, b) Tensor.kind -> Stable_hlo.tensor_element_type = function
   | F32 ->
       Stable_hlo.F32
   | I1 ->
@@ -69,6 +69,7 @@ module rec Var : sig
     | Min : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Max : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Constant : ('a, 'b) Tensor.t -> ('a, 'b) u
+    | BroadcastScalarConstant : ('a, 'b) ValueType.u * 'b -> ('a, 'b) u
     | DotProduct :
         ('a, 'b) u * ('a, 'b) u * int list * int list * int list * int list
         -> ('a, 'b) u
@@ -145,6 +146,7 @@ end = struct
     | Min : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Max : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Constant : ('a, 'b) Tensor.t -> ('a, 'b) u
+    | BroadcastScalarConstant : ('a, 'b) ValueType.u * 'b -> ('a, 'b) u
     | DotProduct :
         ('a, 'b) u * ('a, 'b) u * int list * int list * int list * int list
         -> ('a, 'b) u
@@ -318,6 +320,8 @@ end = struct
         of_var lhs
     | Constant t ->
         of_tensor t
+    | BroadcastScalarConstant (value_type, _) ->
+        value_type
     | DotProduct
         ( lhs
         , rhs
@@ -334,16 +338,14 @@ end = struct
           List.filteri
             (fun i _ ->
               not
-                (List.mem i lhs_batching_dims || List.mem i lhs_contracting_dims)
-              )
+                (List.mem i lhs_batching_dims || List.mem i lhs_contracting_dims) )
             lhs_shape
         in
         let rhs_remaining_dims =
           List.filteri
             (fun i _ ->
               not
-                (List.mem i rhs_batching_dims || List.mem i rhs_contracting_dims)
-              )
+                (List.mem i rhs_batching_dims || List.mem i rhs_contracting_dims) )
             rhs_shape
         in
         (batching_dims @ lhs_remaining_dims @ rhs_remaining_dims, element_type)
@@ -458,8 +460,7 @@ module VarMap = struct
 end
 
 let vars_to_ops vars =
-  let rec aux :
-      type a b.
+  let rec aux : type a b.
          Stable_hlo.annotated_value list
          * (Stable_hlo.op option * Stable_hlo.annotated_value) VarMap.t
       -> (a, b) Var.u
@@ -642,6 +643,24 @@ let vars_to_ops vars =
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
+      | BroadcastScalarConstant (value_type, scalar) ->
+          let output = Var.to_annotated_value var in
+          let repr = Tensor.value_to_string (snd value_type) scalar in
+          let signature =
+            Stable_hlo.value_type_to_string @@ ValueType.tensor_to_stable_hlo
+            @@ value_type
+          in
+          let repr = Printf.sprintf "dense<%s> : %s" repr signature in
+          let op =
+            Stable_hlo.
+              { inputs= []
+              ; outputs= [output]
+              ; name= "stablehlo.constant"
+              ; attributes= [("value", repr)]
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
       | DotProduct
           ( lhs
           , rhs
@@ -765,7 +784,7 @@ let vars_to_ops vars =
       | Sum (var', dimensions) ->
           let var', cache = aux ([], cache) var' in
           let initial, cache =
-            aux ([], cache) (Constant (Tensor.scalar_f32 0.0))
+            aux ([], cache) (Var.BroadcastScalarConstant (([], F32), 0.0))
           in
           let output = Var.to_annotated_value var in
           let op =
@@ -959,8 +978,8 @@ let annotated_values_to_return_op values =
     ; anonymous_functions= []
     ; call= false }
 
-let create_func :
-    type a b. a ValueType.t -> (a Var.t -> b Var.t) -> (a, b) Func.t =
+let create_func : type a b.
+    a ValueType.t -> (a Var.t -> b Var.t) -> (a, b) Func.t =
  fun inputs body ->
   let open Hlist.Map (ValueType.List) (Var.List) in
   let args = ValueType.to_arg inputs in

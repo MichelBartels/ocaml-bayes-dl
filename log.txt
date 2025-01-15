@@ -1,0 +1,2017 @@
+func.func @main(%592 : tensor<784x512xf32>, %591 : tensor<784x512xf32>, %590 : tensor<1x512xf32>, %589 : tensor<1x512xf32>, %588 : tensor<512x16xf32>, %587 : tensor<512x16xf32>, %586 : tensor<1x16xf32>, %585 : tensor<1x16xf32>, %584 : tensor<512x16xf32>, %583 : tensor<512x16xf32>, %582 : tensor<1x16xf32>, %581 : tensor<1x16xf32>, %580 : tensor<16x512xf32>, %579 : tensor<16x512xf32>, %578 : tensor<1x512xf32>, %577 : tensor<1x512xf32>, %576 : tensor<512x784xf32>, %575 : tensor<512x784xf32>, %574 : tensor<1x784xf32>, %573 : tensor<1x784xf32>, %572 : tensor<f32>, %571 : tensor<784x512xf32>, %570 : tensor<784x512xf32>, %569 : tensor<1x512xf32>, %568 : tensor<1x512xf32>, %567 : tensor<512x16xf32>, %566 : tensor<512x16xf32>, %565 : tensor<1x16xf32>, %564 : tensor<1x16xf32>, %563 : tensor<512x16xf32>, %562 : tensor<512x16xf32>, %561 : tensor<1x16xf32>, %560 : tensor<1x16xf32>, %559 : tensor<16x512xf32>, %558 : tensor<16x512xf32>, %557 : tensor<1x512xf32>, %556 : tensor<1x512xf32>, %555 : tensor<512x784xf32>, %554 : tensor<512x784xf32>, %553 : tensor<1x784xf32>, %552 : tensor<1x784xf32>, %551 : tensor<784x512xf32>, %550 : tensor<784x512xf32>, %549 : tensor<1x512xf32>, %548 : tensor<1x512xf32>, %547 : tensor<512x16xf32>, %546 : tensor<512x16xf32>, %545 : tensor<1x16xf32>, %544 : tensor<1x16xf32>, %543 : tensor<512x16xf32>, %542 : tensor<512x16xf32>, %541 : tensor<1x16xf32>, %540 : tensor<1x16xf32>, %539 : tensor<16x512xf32>, %538 : tensor<16x512xf32>, %537 : tensor<1x512xf32>, %536 : tensor<1x512xf32>, %535 : tensor<512x784xf32>, %534 : tensor<512x784xf32>, %533 : tensor<1x784xf32>, %532 : tensor<1x784xf32>, %531 : tensor<128x1x784xf32>, %530 : tensor<ui64>) -> (tensor<f32>, tensor<784x512xf32>, tensor<784x512xf32>, tensor<1x512xf32>, tensor<1x512xf32>, tensor<512x16xf32>, tensor<512x16xf32>, tensor<1x16xf32>, tensor<1x16xf32>, tensor<512x16xf32>, tensor<512x16xf32>, tensor<1x16xf32>, tensor<1x16xf32>, tensor<16x512xf32>, tensor<16x512xf32>, tensor<1x512xf32>, tensor<1x512xf32>, tensor<512x784xf32>, tensor<512x784xf32>, tensor<1x784xf32>, tensor<1x784xf32>, tensor<f32>, tensor<784x512xf32>, tensor<784x512xf32>, tensor<1x512xf32>, tensor<1x512xf32>, tensor<512x16xf32>, tensor<512x16xf32>, tensor<1x16xf32>, tensor<1x16xf32>, tensor<512x16xf32>, tensor<512x16xf32>, tensor<1x16xf32>, tensor<1x16xf32>, tensor<16x512xf32>, tensor<16x512xf32>, tensor<1x512xf32>, tensor<1x512xf32>, tensor<512x784xf32>, tensor<512x784xf32>, tensor<1x784xf32>, tensor<1x784xf32>, tensor<784x512xf32>, tensor<784x512xf32>, tensor<1x512xf32>, tensor<1x512xf32>, tensor<512x16xf32>, tensor<512x16xf32>, tensor<1x16xf32>, tensor<1x16xf32>, tensor<512x16xf32>, tensor<512x16xf32>, tensor<1x16xf32>, tensor<1x16xf32>, tensor<16x512xf32>, tensor<16x512xf32>, tensor<1x512xf32>, tensor<1x512xf32>, tensor<512x784xf32>, tensor<512x784xf32>, tensor<1x784xf32>, tensor<1x784xf32>, tensor<ui64>) {
+%1447 = "stablehlo.constant"() {
+value = dense<1.000000e+00> : tensor<128x1x784xf32>
+} : () -> (tensor<128x1x784xf32>)
+%1448 = "stablehlo.constant"() {
+value = dense<-1.000000e+00> : tensor<128x1x784xf32>
+} : () -> (tensor<128x1x784xf32>)
+%1453 = "stablehlo.broadcast_in_dim"(%592) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<784x512xf32>) -> (tensor<128x784x512xf32>)
+%1454 = "stablehlo.constant"() {
+value = dense<0.000000e+00> : tensor<128x784x512xf32>
+} : () -> (tensor<128x784x512xf32>)
+%1455 = "stablehlo.broadcast_in_dim"(%591) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<784x512xf32>) -> (tensor<128x784x512xf32>)
+%1456 = "stablehlo.multiply"(%1454, %1455) : (tensor<128x784x512xf32>, tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1457 = "stablehlo.add"(%1453, %1456) : (tensor<128x784x512xf32>, tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1452 = "stablehlo.dot_general"(%531, %1457) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [2],
+rhs_contracting_dimensions = [1]
+>
+} : (tensor<128x1x784xf32>, tensor<128x784x512xf32>) -> (tensor<128x1x512xf32>)
+%1458 = "stablehlo.broadcast_in_dim"(%590) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<1x512xf32>) -> (tensor<128x1x512xf32>)
+%1459 = "stablehlo.constant"() {
+value = dense<0.000000e+00> : tensor<128x1x512xf32>
+} : () -> (tensor<128x1x512xf32>)
+%1460 = "stablehlo.broadcast_in_dim"(%589) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<1x512xf32>) -> (tensor<128x1x512xf32>)
+%1461 = "stablehlo.multiply"(%1459, %1460) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1462 = "stablehlo.add"(%1458, %1461) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1463 = "stablehlo.add"(%1452, %1462) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1464 = "stablehlo.tanh"(%1463) : (tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1465 = "stablehlo.broadcast_in_dim"(%588) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<512x16xf32>) -> (tensor<128x512x16xf32>)
+%1466 = "stablehlo.constant"() {
+value = dense<0.000000e+00> : tensor<128x512x16xf32>
+} : () -> (tensor<128x512x16xf32>)
+%1467 = "stablehlo.broadcast_in_dim"(%587) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<512x16xf32>) -> (tensor<128x512x16xf32>)
+%1468 = "stablehlo.multiply"(%1466, %1467) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1469 = "stablehlo.add"(%1465, %1468) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1451 = "stablehlo.dot_general"(%1464, %1469) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [2],
+rhs_contracting_dimensions = [1]
+>
+} : (tensor<128x1x512xf32>, tensor<128x512x16xf32>) -> (tensor<128x1x16xf32>)
+%1470 = "stablehlo.broadcast_in_dim"(%586) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<1x16xf32>) -> (tensor<128x1x16xf32>)
+%1471 = "stablehlo.constant"() {
+value = dense<0.000000e+00> : tensor<128x1x16xf32>
+} : () -> (tensor<128x1x16xf32>)
+%1472 = "stablehlo.broadcast_in_dim"(%585) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<1x16xf32>) -> (tensor<128x1x16xf32>)
+%1473 = "stablehlo.multiply"(%1471, %1472) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1474 = "stablehlo.add"(%1470, %1473) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1475 = "stablehlo.add"(%1451, %1474) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1477 = "stablehlo.broadcast_in_dim"(%584) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<512x16xf32>) -> (tensor<128x512x16xf32>)
+%1478 = "stablehlo.broadcast_in_dim"(%583) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<512x16xf32>) -> (tensor<128x512x16xf32>)
+%1479 = "stablehlo.multiply"(%1466, %1478) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1480 = "stablehlo.add"(%1477, %1479) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1476 = "stablehlo.dot_general"(%1464, %1480) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [2],
+rhs_contracting_dimensions = [1]
+>
+} : (tensor<128x1x512xf32>, tensor<128x512x16xf32>) -> (tensor<128x1x16xf32>)
+%1481 = "stablehlo.broadcast_in_dim"(%582) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<1x16xf32>) -> (tensor<128x1x16xf32>)
+%1482 = "stablehlo.broadcast_in_dim"(%581) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<1x16xf32>) -> (tensor<128x1x16xf32>)
+%1483 = "stablehlo.multiply"(%1471, %1482) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1484 = "stablehlo.add"(%1481, %1483) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1485 = "stablehlo.add"(%1476, %1484) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1486 = "stablehlo.exponential"(%1485) : (tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1487 = "stablehlo.multiply"(%1471, %1486) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1488 = "stablehlo.add"(%1475, %1487) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1489 = "stablehlo.broadcast_in_dim"(%580) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<16x512xf32>) -> (tensor<128x16x512xf32>)
+%1490 = "stablehlo.constant"() {
+value = dense<0.000000e+00> : tensor<128x16x512xf32>
+} : () -> (tensor<128x16x512xf32>)
+%1491 = "stablehlo.broadcast_in_dim"(%579) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<16x512xf32>) -> (tensor<128x16x512xf32>)
+%1492 = "stablehlo.multiply"(%1490, %1491) : (tensor<128x16x512xf32>, tensor<128x16x512xf32>) -> (tensor<128x16x512xf32>)
+%1493 = "stablehlo.add"(%1489, %1492) : (tensor<128x16x512xf32>, tensor<128x16x512xf32>) -> (tensor<128x16x512xf32>)
+%1450 = "stablehlo.dot_general"(%1488, %1493) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [2],
+rhs_contracting_dimensions = [1]
+>
+} : (tensor<128x1x16xf32>, tensor<128x16x512xf32>) -> (tensor<128x1x512xf32>)
+%1494 = "stablehlo.broadcast_in_dim"(%578) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<1x512xf32>) -> (tensor<128x1x512xf32>)
+%1495 = "stablehlo.broadcast_in_dim"(%577) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<1x512xf32>) -> (tensor<128x1x512xf32>)
+%1496 = "stablehlo.multiply"(%1459, %1495) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1497 = "stablehlo.add"(%1494, %1496) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1498 = "stablehlo.add"(%1450, %1497) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1499 = "stablehlo.tanh"(%1498) : (tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1500 = "stablehlo.broadcast_in_dim"(%576) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<512x784xf32>) -> (tensor<128x512x784xf32>)
+%1501 = "stablehlo.constant"() {
+value = dense<0.000000e+00> : tensor<128x512x784xf32>
+} : () -> (tensor<128x512x784xf32>)
+%1502 = "stablehlo.broadcast_in_dim"(%575) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<512x784xf32>) -> (tensor<128x512x784xf32>)
+%1503 = "stablehlo.multiply"(%1501, %1502) : (tensor<128x512x784xf32>, tensor<128x512x784xf32>) -> (tensor<128x512x784xf32>)
+%1504 = "stablehlo.add"(%1500, %1503) : (tensor<128x512x784xf32>, tensor<128x512x784xf32>) -> (tensor<128x512x784xf32>)
+%1449 = "stablehlo.dot_general"(%1499, %1504) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [2],
+rhs_contracting_dimensions = [1]
+>
+} : (tensor<128x1x512xf32>, tensor<128x512x784xf32>) -> (tensor<128x1x784xf32>)
+%1505 = "stablehlo.broadcast_in_dim"(%574) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<1x784xf32>) -> (tensor<128x1x784xf32>)
+%1506 = "stablehlo.constant"() {
+value = dense<0.000000e+00> : tensor<128x1x784xf32>
+} : () -> (tensor<128x1x784xf32>)
+%1507 = "stablehlo.broadcast_in_dim"(%573) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<1x784xf32>) -> (tensor<128x1x784xf32>)
+%1508 = "stablehlo.multiply"(%1506, %1507) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1509 = "stablehlo.add"(%1505, %1508) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1510 = "stablehlo.add"(%1449, %1509) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1511 = "stablehlo.multiply"(%1448, %1510) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1512 = "stablehlo.exponential"(%1511) : (tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1513 = "stablehlo.add"(%1447, %1512) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1514 = "stablehlo.divide"(%1447, %1513) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1515 = "stablehlo.subtract"(%531, %1514) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1516 = "stablehlo.multiply"(%1515, %1515) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1517 = "stablehlo.constant"() {
+value = dense<0.000000e+00> : tensor<f32>
+} : () -> (tensor<f32>)
+%1518 = "stablehlo.reduce"(%1516, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x784xf32>, tensor<f32>) -> (tensor<1x784xf32>)
+%1519 = "stablehlo.constant"() {
+value = dense<1.280000e+02> : tensor<1x784xf32>
+} : () -> (tensor<1x784xf32>)
+%1520 = "stablehlo.divide"(%1518, %1519) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%1521 = "stablehlo.reduce"(%1520, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0,1>
+} : (tensor<1x784xf32>, tensor<f32>) -> (tensor<f32>)
+%1522 = "stablehlo.constant"() {
+value = dense<-5.000000e-01> : tensor<128x1x16xf32>
+} : () -> (tensor<128x1x16xf32>)
+%1523 = "stablehlo.constant"() {
+value = dense<1.000000e+00> : tensor<128x1x16xf32>
+} : () -> (tensor<128x1x16xf32>)
+%1524 = "stablehlo.add"(%1523, %1485) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1525 = "stablehlo.multiply"(%1475, %1475) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1526 = "stablehlo.subtract"(%1524, %1525) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1527 = "stablehlo.subtract"(%1526, %1486) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1528 = "stablehlo.multiply"(%1522, %1527) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1529 = "stablehlo.reduce"(%1528, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0,1>
+} : (tensor<128x1x16xf32>, tensor<f32>) -> (tensor<16xf32>)
+%1530 = "stablehlo.constant"() {
+value = dense<1.280000e+02> : tensor<16xf32>
+} : () -> (tensor<16xf32>)
+%1531 = "stablehlo.divide"(%1529, %1530) : (tensor<16xf32>, tensor<16xf32>) -> (tensor<16xf32>)
+%1532 = "stablehlo.reduce"(%1531, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<16xf32>, tensor<f32>) -> (tensor<f32>)
+%1533 = "stablehlo.add"(%1521, %1532) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+%1534 = "stablehlo.constant"() {
+value = dense<-5.000000e-01> : tensor<128x784x512xf32>
+} : () -> (tensor<128x784x512xf32>)
+%1535 = "stablehlo.constant"() {
+value = dense<1.000000e+00> : tensor<128x784x512xf32>
+} : () -> (tensor<128x784x512xf32>)
+%1536 = "stablehlo.constant"() {
+value = dense<1.000000e+03> : tensor<128x784x512xf32>
+} : () -> (tensor<128x784x512xf32>)
+%1537 = "stablehlo.multiply"(%1455, %1536) : (tensor<128x784x512xf32>, tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1538 = "stablehlo.log"(%1537) : (tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1539 = "stablehlo.add"(%1535, %1538) : (tensor<128x784x512xf32>, tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1540 = "stablehlo.multiply"(%1453, %1453) : (tensor<128x784x512xf32>, tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1541 = "stablehlo.subtract"(%1539, %1540) : (tensor<128x784x512xf32>, tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1542 = "stablehlo.subtract"(%1541, %1537) : (tensor<128x784x512xf32>, tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1543 = "stablehlo.multiply"(%1534, %1542) : (tensor<128x784x512xf32>, tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1544 = "stablehlo.reduce"(%1543, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0,1>
+} : (tensor<128x784x512xf32>, tensor<f32>) -> (tensor<512xf32>)
+%1545 = "stablehlo.constant"() {
+value = dense<1.003520e+05> : tensor<512xf32>
+} : () -> (tensor<512xf32>)
+%1546 = "stablehlo.divide"(%1544, %1545) : (tensor<512xf32>, tensor<512xf32>) -> (tensor<512xf32>)
+%1547 = "stablehlo.reduce"(%1546, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<512xf32>, tensor<f32>) -> (tensor<f32>)
+%1548 = "stablehlo.constant"() {
+value = dense<-5.000000e-01> : tensor<128x1x512xf32>
+} : () -> (tensor<128x1x512xf32>)
+%1549 = "stablehlo.constant"() {
+value = dense<1.000000e+00> : tensor<128x1x512xf32>
+} : () -> (tensor<128x1x512xf32>)
+%1550 = "stablehlo.constant"() {
+value = dense<1.000000e+03> : tensor<128x1x512xf32>
+} : () -> (tensor<128x1x512xf32>)
+%1551 = "stablehlo.multiply"(%1460, %1550) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1552 = "stablehlo.log"(%1551) : (tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1553 = "stablehlo.add"(%1549, %1552) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1554 = "stablehlo.multiply"(%1458, %1458) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1555 = "stablehlo.subtract"(%1553, %1554) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1556 = "stablehlo.subtract"(%1555, %1551) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1557 = "stablehlo.multiply"(%1548, %1556) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1558 = "stablehlo.reduce"(%1557, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0,1>
+} : (tensor<128x1x512xf32>, tensor<f32>) -> (tensor<512xf32>)
+%1559 = "stablehlo.constant"() {
+value = dense<1.280000e+02> : tensor<512xf32>
+} : () -> (tensor<512xf32>)
+%1560 = "stablehlo.divide"(%1558, %1559) : (tensor<512xf32>, tensor<512xf32>) -> (tensor<512xf32>)
+%1561 = "stablehlo.reduce"(%1560, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<512xf32>, tensor<f32>) -> (tensor<f32>)
+%1562 = "stablehlo.add"(%1547, %1561) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+%1563 = "stablehlo.constant"() {
+value = dense<-5.000000e-01> : tensor<128x512x16xf32>
+} : () -> (tensor<128x512x16xf32>)
+%1564 = "stablehlo.constant"() {
+value = dense<1.000000e+00> : tensor<128x512x16xf32>
+} : () -> (tensor<128x512x16xf32>)
+%1565 = "stablehlo.constant"() {
+value = dense<1.000000e+03> : tensor<128x512x16xf32>
+} : () -> (tensor<128x512x16xf32>)
+%1566 = "stablehlo.multiply"(%1467, %1565) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1567 = "stablehlo.log"(%1566) : (tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1568 = "stablehlo.add"(%1564, %1567) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1569 = "stablehlo.multiply"(%1465, %1465) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1570 = "stablehlo.subtract"(%1568, %1569) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1571 = "stablehlo.subtract"(%1570, %1566) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1572 = "stablehlo.multiply"(%1563, %1571) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1573 = "stablehlo.reduce"(%1572, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0,1>
+} : (tensor<128x512x16xf32>, tensor<f32>) -> (tensor<16xf32>)
+%1574 = "stablehlo.constant"() {
+value = dense<6.553600e+04> : tensor<16xf32>
+} : () -> (tensor<16xf32>)
+%1575 = "stablehlo.divide"(%1573, %1574) : (tensor<16xf32>, tensor<16xf32>) -> (tensor<16xf32>)
+%1576 = "stablehlo.reduce"(%1575, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<16xf32>, tensor<f32>) -> (tensor<f32>)
+%1577 = "stablehlo.constant"() {
+value = dense<1.000000e+03> : tensor<128x1x16xf32>
+} : () -> (tensor<128x1x16xf32>)
+%1578 = "stablehlo.multiply"(%1472, %1577) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1579 = "stablehlo.log"(%1578) : (tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1580 = "stablehlo.add"(%1523, %1579) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1581 = "stablehlo.multiply"(%1470, %1470) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1582 = "stablehlo.subtract"(%1580, %1581) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1583 = "stablehlo.subtract"(%1582, %1578) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1584 = "stablehlo.multiply"(%1522, %1583) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1585 = "stablehlo.reduce"(%1584, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0,1>
+} : (tensor<128x1x16xf32>, tensor<f32>) -> (tensor<16xf32>)
+%1586 = "stablehlo.divide"(%1585, %1530) : (tensor<16xf32>, tensor<16xf32>) -> (tensor<16xf32>)
+%1587 = "stablehlo.reduce"(%1586, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<16xf32>, tensor<f32>) -> (tensor<f32>)
+%1588 = "stablehlo.add"(%1576, %1587) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+%1589 = "stablehlo.add"(%1562, %1588) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+%1590 = "stablehlo.multiply"(%1478, %1565) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1591 = "stablehlo.log"(%1590) : (tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1592 = "stablehlo.add"(%1564, %1591) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1593 = "stablehlo.multiply"(%1477, %1477) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1594 = "stablehlo.subtract"(%1592, %1593) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1595 = "stablehlo.subtract"(%1594, %1590) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1596 = "stablehlo.multiply"(%1563, %1595) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1597 = "stablehlo.reduce"(%1596, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0,1>
+} : (tensor<128x512x16xf32>, tensor<f32>) -> (tensor<16xf32>)
+%1598 = "stablehlo.divide"(%1597, %1574) : (tensor<16xf32>, tensor<16xf32>) -> (tensor<16xf32>)
+%1599 = "stablehlo.reduce"(%1598, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<16xf32>, tensor<f32>) -> (tensor<f32>)
+%1600 = "stablehlo.multiply"(%1482, %1577) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1601 = "stablehlo.log"(%1600) : (tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1602 = "stablehlo.add"(%1523, %1601) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1603 = "stablehlo.multiply"(%1481, %1481) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1604 = "stablehlo.subtract"(%1602, %1603) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1605 = "stablehlo.subtract"(%1604, %1600) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1606 = "stablehlo.multiply"(%1522, %1605) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1607 = "stablehlo.reduce"(%1606, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0,1>
+} : (tensor<128x1x16xf32>, tensor<f32>) -> (tensor<16xf32>)
+%1608 = "stablehlo.divide"(%1607, %1530) : (tensor<16xf32>, tensor<16xf32>) -> (tensor<16xf32>)
+%1609 = "stablehlo.reduce"(%1608, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<16xf32>, tensor<f32>) -> (tensor<f32>)
+%1610 = "stablehlo.add"(%1599, %1609) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+%1611 = "stablehlo.add"(%1589, %1610) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+%1612 = "stablehlo.add"(%1533, %1611) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+%1613 = "stablehlo.constant"() {
+value = dense<-5.000000e-01> : tensor<128x16x512xf32>
+} : () -> (tensor<128x16x512xf32>)
+%1614 = "stablehlo.constant"() {
+value = dense<1.000000e+00> : tensor<128x16x512xf32>
+} : () -> (tensor<128x16x512xf32>)
+%1615 = "stablehlo.constant"() {
+value = dense<1.000000e+03> : tensor<128x16x512xf32>
+} : () -> (tensor<128x16x512xf32>)
+%1616 = "stablehlo.multiply"(%1491, %1615) : (tensor<128x16x512xf32>, tensor<128x16x512xf32>) -> (tensor<128x16x512xf32>)
+%1617 = "stablehlo.log"(%1616) : (tensor<128x16x512xf32>) -> (tensor<128x16x512xf32>)
+%1618 = "stablehlo.add"(%1614, %1617) : (tensor<128x16x512xf32>, tensor<128x16x512xf32>) -> (tensor<128x16x512xf32>)
+%1619 = "stablehlo.multiply"(%1489, %1489) : (tensor<128x16x512xf32>, tensor<128x16x512xf32>) -> (tensor<128x16x512xf32>)
+%1620 = "stablehlo.subtract"(%1618, %1619) : (tensor<128x16x512xf32>, tensor<128x16x512xf32>) -> (tensor<128x16x512xf32>)
+%1621 = "stablehlo.subtract"(%1620, %1616) : (tensor<128x16x512xf32>, tensor<128x16x512xf32>) -> (tensor<128x16x512xf32>)
+%1622 = "stablehlo.multiply"(%1613, %1621) : (tensor<128x16x512xf32>, tensor<128x16x512xf32>) -> (tensor<128x16x512xf32>)
+%1623 = "stablehlo.reduce"(%1622, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0,1>
+} : (tensor<128x16x512xf32>, tensor<f32>) -> (tensor<512xf32>)
+%1624 = "stablehlo.constant"() {
+value = dense<2.048000e+03> : tensor<512xf32>
+} : () -> (tensor<512xf32>)
+%1625 = "stablehlo.divide"(%1623, %1624) : (tensor<512xf32>, tensor<512xf32>) -> (tensor<512xf32>)
+%1626 = "stablehlo.reduce"(%1625, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<512xf32>, tensor<f32>) -> (tensor<f32>)
+%1627 = "stablehlo.multiply"(%1495, %1550) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1628 = "stablehlo.log"(%1627) : (tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1629 = "stablehlo.add"(%1549, %1628) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1630 = "stablehlo.multiply"(%1494, %1494) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1631 = "stablehlo.subtract"(%1629, %1630) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1632 = "stablehlo.subtract"(%1631, %1627) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1633 = "stablehlo.multiply"(%1548, %1632) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1634 = "stablehlo.reduce"(%1633, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0,1>
+} : (tensor<128x1x512xf32>, tensor<f32>) -> (tensor<512xf32>)
+%1635 = "stablehlo.divide"(%1634, %1559) : (tensor<512xf32>, tensor<512xf32>) -> (tensor<512xf32>)
+%1636 = "stablehlo.reduce"(%1635, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<512xf32>, tensor<f32>) -> (tensor<f32>)
+%1637 = "stablehlo.add"(%1626, %1636) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+%1638 = "stablehlo.constant"() {
+value = dense<-5.000000e-01> : tensor<128x512x784xf32>
+} : () -> (tensor<128x512x784xf32>)
+%1639 = "stablehlo.constant"() {
+value = dense<1.000000e+00> : tensor<128x512x784xf32>
+} : () -> (tensor<128x512x784xf32>)
+%1640 = "stablehlo.constant"() {
+value = dense<1.000000e+03> : tensor<128x512x784xf32>
+} : () -> (tensor<128x512x784xf32>)
+%1641 = "stablehlo.multiply"(%1502, %1640) : (tensor<128x512x784xf32>, tensor<128x512x784xf32>) -> (tensor<128x512x784xf32>)
+%1642 = "stablehlo.log"(%1641) : (tensor<128x512x784xf32>) -> (tensor<128x512x784xf32>)
+%1643 = "stablehlo.add"(%1639, %1642) : (tensor<128x512x784xf32>, tensor<128x512x784xf32>) -> (tensor<128x512x784xf32>)
+%1644 = "stablehlo.multiply"(%1500, %1500) : (tensor<128x512x784xf32>, tensor<128x512x784xf32>) -> (tensor<128x512x784xf32>)
+%1645 = "stablehlo.subtract"(%1643, %1644) : (tensor<128x512x784xf32>, tensor<128x512x784xf32>) -> (tensor<128x512x784xf32>)
+%1646 = "stablehlo.subtract"(%1645, %1641) : (tensor<128x512x784xf32>, tensor<128x512x784xf32>) -> (tensor<128x512x784xf32>)
+%1647 = "stablehlo.multiply"(%1638, %1646) : (tensor<128x512x784xf32>, tensor<128x512x784xf32>) -> (tensor<128x512x784xf32>)
+%1648 = "stablehlo.reduce"(%1647, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0,1>
+} : (tensor<128x512x784xf32>, tensor<f32>) -> (tensor<784xf32>)
+%1649 = "stablehlo.constant"() {
+value = dense<6.553600e+04> : tensor<784xf32>
+} : () -> (tensor<784xf32>)
+%1650 = "stablehlo.divide"(%1648, %1649) : (tensor<784xf32>, tensor<784xf32>) -> (tensor<784xf32>)
+%1651 = "stablehlo.reduce"(%1650, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<784xf32>, tensor<f32>) -> (tensor<f32>)
+%1652 = "stablehlo.constant"() {
+value = dense<-5.000000e-01> : tensor<128x1x784xf32>
+} : () -> (tensor<128x1x784xf32>)
+%1653 = "stablehlo.constant"() {
+value = dense<1.000000e+03> : tensor<128x1x784xf32>
+} : () -> (tensor<128x1x784xf32>)
+%1654 = "stablehlo.multiply"(%1507, %1653) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1655 = "stablehlo.log"(%1654) : (tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1656 = "stablehlo.add"(%1447, %1655) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1657 = "stablehlo.multiply"(%1505, %1505) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1658 = "stablehlo.subtract"(%1656, %1657) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1659 = "stablehlo.subtract"(%1658, %1654) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1660 = "stablehlo.multiply"(%1652, %1659) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1661 = "stablehlo.reduce"(%1660, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0,1>
+} : (tensor<128x1x784xf32>, tensor<f32>) -> (tensor<784xf32>)
+%1662 = "stablehlo.constant"() {
+value = dense<1.280000e+02> : tensor<784xf32>
+} : () -> (tensor<784xf32>)
+%1663 = "stablehlo.divide"(%1661, %1662) : (tensor<784xf32>, tensor<784xf32>) -> (tensor<784xf32>)
+%1664 = "stablehlo.reduce"(%1663, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<784xf32>, tensor<f32>) -> (tensor<f32>)
+%1665 = "stablehlo.add"(%1651, %1664) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+%1666 = "stablehlo.add"(%1637, %1665) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+%1667 = "stablehlo.add"(%1612, %1666) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+%1668 = "stablehlo.constant"() {
+value = dense<0.000000e+00> : tensor<784x512xf32>
+} : () -> (tensor<784x512xf32>)
+%1673 = "stablehlo.constant"() {
+value = dense<1.000000e+00> : tensor<f32>
+} : () -> (tensor<f32>)
+%1674 = "stablehlo.broadcast_in_dim"(%1673) {
+broadcast_dimensions = array<i64>
+} : (tensor<f32>) -> (tensor<1x784xf32>)
+%1675 = "stablehlo.transpose"(%1674) {
+permutation = array<i64: 0,1>
+} : (tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%1676 = "stablehlo.divide"(%1675, %1519) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%1677 = "stablehlo.broadcast_in_dim"(%1676) {
+broadcast_dimensions = array<i64: 1,2>
+} : (tensor<1x784xf32>) -> (tensor<128x1x784xf32>)
+%1678 = "stablehlo.transpose"(%1677) {
+permutation = array<i64: 0,1,2>
+} : (tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1679 = "stablehlo.multiply"(%1515, %1678) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1680 = "stablehlo.subtract"(%1506, %1447) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1681 = "stablehlo.multiply"(%1679, %1680) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1682 = "stablehlo.multiply"(%1513, %1513) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1683 = "stablehlo.divide"(%1681, %1682) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1684 = "stablehlo.multiply"(%1683, %1512) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1685 = "stablehlo.multiply"(%1448, %1684) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%1672 = "stablehlo.dot_general"(%1504, %1685) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [2],
+rhs_contracting_dimensions = [2]
+>
+} : (tensor<128x512x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x512x1xf32>)
+%1686 = "stablehlo.transpose"(%1672) {
+permutation = array<i64: 0,2,1>
+} : (tensor<128x512x1xf32>) -> (tensor<128x1x512xf32>)
+%1687 = "stablehlo.multiply"(%1499, %1499) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1688 = "stablehlo.subtract"(%1549, %1687) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1689 = "stablehlo.multiply"(%1686, %1688) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1671 = "stablehlo.dot_general"(%1493, %1689) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [2],
+rhs_contracting_dimensions = [2]
+>
+} : (tensor<128x16x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x16x1xf32>)
+%1690 = "stablehlo.transpose"(%1671) {
+permutation = array<i64: 0,2,1>
+} : (tensor<128x16x1xf32>) -> (tensor<128x1x16xf32>)
+%1670 = "stablehlo.dot_general"(%1469, %1690) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [2],
+rhs_contracting_dimensions = [2]
+>
+} : (tensor<128x512x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x512x1xf32>)
+%1691 = "stablehlo.transpose"(%1670) {
+permutation = array<i64: 0,2,1>
+} : (tensor<128x512x1xf32>) -> (tensor<128x1x512xf32>)
+%1692 = "stablehlo.multiply"(%1464, %1464) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1693 = "stablehlo.subtract"(%1549, %1692) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1694 = "stablehlo.multiply"(%1691, %1693) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1669 = "stablehlo.dot_general"(%531, %1694) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [1],
+rhs_contracting_dimensions = [1]
+>
+} : (tensor<128x1x784xf32>, tensor<128x1x512xf32>) -> (tensor<128x784x512xf32>)
+%1695 = "stablehlo.transpose"(%1669) {
+permutation = array<i64: 0,1,2>
+} : (tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1696 = "stablehlo.reduce"(%1695, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x784x512xf32>, tensor<f32>) -> (tensor<784x512xf32>)
+%1699 = "stablehlo.multiply"(%1471, %1690) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1700 = "stablehlo.multiply"(%1699, %1486) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1698 = "stablehlo.dot_general"(%1480, %1700) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [2],
+rhs_contracting_dimensions = [2]
+>
+} : (tensor<128x512x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x512x1xf32>)
+%1701 = "stablehlo.transpose"(%1698) {
+permutation = array<i64: 0,2,1>
+} : (tensor<128x512x1xf32>) -> (tensor<128x1x512xf32>)
+%1702 = "stablehlo.multiply"(%1701, %1693) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1697 = "stablehlo.dot_general"(%531, %1702) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [1],
+rhs_contracting_dimensions = [1]
+>
+} : (tensor<128x1x784xf32>, tensor<128x1x512xf32>) -> (tensor<128x784x512xf32>)
+%1703 = "stablehlo.transpose"(%1697) {
+permutation = array<i64: 0,1,2>
+} : (tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1704 = "stablehlo.reduce"(%1703, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x784x512xf32>, tensor<f32>) -> (tensor<784x512xf32>)
+%1705 = "stablehlo.add"(%1696, %1704) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1706 = "stablehlo.subtract"(%1668, %1705) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1707 = "stablehlo.add"(%1706, %1706) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1710 = "stablehlo.broadcast_in_dim"(%1673) {
+broadcast_dimensions = array<i64>
+} : (tensor<f32>) -> (tensor<16xf32>)
+%1711 = "stablehlo.transpose"(%1710) {
+permutation = array<i64: 0>
+} : (tensor<16xf32>) -> (tensor<16xf32>)
+%1712 = "stablehlo.divide"(%1711, %1530) : (tensor<16xf32>, tensor<16xf32>) -> (tensor<16xf32>)
+%1713 = "stablehlo.broadcast_in_dim"(%1712) {
+broadcast_dimensions = array<i64: 2>
+} : (tensor<16xf32>) -> (tensor<128x1x16xf32>)
+%1714 = "stablehlo.transpose"(%1713) {
+permutation = array<i64: 0,1,2>
+} : (tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1715 = "stablehlo.multiply"(%1522, %1714) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1709 = "stablehlo.dot_general"(%1480, %1715) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [2],
+rhs_contracting_dimensions = [2]
+>
+} : (tensor<128x512x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x512x1xf32>)
+%1716 = "stablehlo.transpose"(%1709) {
+permutation = array<i64: 0,2,1>
+} : (tensor<128x512x1xf32>) -> (tensor<128x1x512xf32>)
+%1717 = "stablehlo.multiply"(%1716, %1693) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1708 = "stablehlo.dot_general"(%531, %1717) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [1],
+rhs_contracting_dimensions = [1]
+>
+} : (tensor<128x1x784xf32>, tensor<128x1x512xf32>) -> (tensor<128x784x512xf32>)
+%1718 = "stablehlo.transpose"(%1708) {
+permutation = array<i64: 0,1,2>
+} : (tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1719 = "stablehlo.reduce"(%1718, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x784x512xf32>, tensor<f32>) -> (tensor<784x512xf32>)
+%1722 = "stablehlo.multiply"(%1475, %1715) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1721 = "stablehlo.dot_general"(%1469, %1722) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [2],
+rhs_contracting_dimensions = [2]
+>
+} : (tensor<128x512x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x512x1xf32>)
+%1723 = "stablehlo.transpose"(%1721) {
+permutation = array<i64: 0,2,1>
+} : (tensor<128x512x1xf32>) -> (tensor<128x1x512xf32>)
+%1724 = "stablehlo.multiply"(%1723, %1693) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1720 = "stablehlo.dot_general"(%531, %1724) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [1],
+rhs_contracting_dimensions = [1]
+>
+} : (tensor<128x1x784xf32>, tensor<128x1x512xf32>) -> (tensor<128x784x512xf32>)
+%1725 = "stablehlo.transpose"(%1720) {
+permutation = array<i64: 0,1,2>
+} : (tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1726 = "stablehlo.reduce"(%1725, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x784x512xf32>, tensor<f32>) -> (tensor<784x512xf32>)
+%1727 = "stablehlo.add"(%1726, %1726) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1728 = "stablehlo.subtract"(%1719, %1727) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1731 = "stablehlo.multiply"(%1715, %1486) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1730 = "stablehlo.dot_general"(%1480, %1731) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [2],
+rhs_contracting_dimensions = [2]
+>
+} : (tensor<128x512x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x512x1xf32>)
+%1732 = "stablehlo.transpose"(%1730) {
+permutation = array<i64: 0,2,1>
+} : (tensor<128x512x1xf32>) -> (tensor<128x1x512xf32>)
+%1733 = "stablehlo.multiply"(%1732, %1693) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1729 = "stablehlo.dot_general"(%531, %1733) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [1],
+rhs_contracting_dimensions = [1]
+>
+} : (tensor<128x1x784xf32>, tensor<128x1x512xf32>) -> (tensor<128x784x512xf32>)
+%1734 = "stablehlo.transpose"(%1729) {
+permutation = array<i64: 0,1,2>
+} : (tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1735 = "stablehlo.reduce"(%1734, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x784x512xf32>, tensor<f32>) -> (tensor<784x512xf32>)
+%1736 = "stablehlo.subtract"(%1728, %1735) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1737 = "stablehlo.add"(%1707, %1736) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1738 = "stablehlo.broadcast_in_dim"(%1673) {
+broadcast_dimensions = array<i64>
+} : (tensor<f32>) -> (tensor<512xf32>)
+%1739 = "stablehlo.transpose"(%1738) {
+permutation = array<i64: 0>
+} : (tensor<512xf32>) -> (tensor<512xf32>)
+%1740 = "stablehlo.divide"(%1739, %1545) : (tensor<512xf32>, tensor<512xf32>) -> (tensor<512xf32>)
+%1741 = "stablehlo.broadcast_in_dim"(%1740) {
+broadcast_dimensions = array<i64: 2>
+} : (tensor<512xf32>) -> (tensor<128x784x512xf32>)
+%1742 = "stablehlo.transpose"(%1741) {
+permutation = array<i64: 0,1,2>
+} : (tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1743 = "stablehlo.multiply"(%1534, %1742) : (tensor<128x784x512xf32>, tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1744 = "stablehlo.multiply"(%1453, %1743) : (tensor<128x784x512xf32>, tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1745 = "stablehlo.reduce"(%1744, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x784x512xf32>, tensor<f32>) -> (tensor<784x512xf32>)
+%1746 = "stablehlo.add"(%1745, %1745) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1747 = "stablehlo.subtract"(%1668, %1746) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1748 = "stablehlo.add"(%1737, %1747) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1749 = "stablehlo.constant"() {
+value = dense<1.000000e-06> : tensor<784x512xf32>
+} : () -> (tensor<784x512xf32>)
+%1750 = "stablehlo.multiply"(%1748, %1749) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1751 = "stablehlo.subtract"(%592, %1750) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1752 = "stablehlo.constant"() {
+value = dense<1.000000e-04> : tensor<784x512xf32>
+} : () -> (tensor<784x512xf32>)
+%1753 = "stablehlo.constant"() {
+value = dense<9.000000e-01> : tensor<784x512xf32>
+} : () -> (tensor<784x512xf32>)
+%1754 = "stablehlo.multiply"(%1753, %571) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1755 = "stablehlo.constant"() {
+value = dense<1.000000e-01> : tensor<784x512xf32>
+} : () -> (tensor<784x512xf32>)
+%1756 = "stablehlo.multiply"(%1755, %1748) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1757 = "stablehlo.add"(%1754, %1756) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1758 = "stablehlo.constant"() {
+value = dense<9.000000e-01> : tensor<f32>
+} : () -> (tensor<f32>)
+%1759 = "stablehlo.power"(%1758, %572) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+%1760 = "stablehlo.subtract"(%1673, %1759) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+%1761 = "stablehlo.broadcast_in_dim"(%1760) {
+broadcast_dimensions = array<i64>
+} : (tensor<f32>) -> (tensor<784x512xf32>)
+%1762 = "stablehlo.divide"(%1757, %1761) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1763 = "stablehlo.multiply"(%1752, %1762) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1764 = "stablehlo.constant"() {
+value = dense<9.990000e-01> : tensor<784x512xf32>
+} : () -> (tensor<784x512xf32>)
+%1765 = "stablehlo.multiply"(%1764, %551) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1766 = "stablehlo.constant"() {
+value = dense<1.000000e-03> : tensor<784x512xf32>
+} : () -> (tensor<784x512xf32>)
+%1767 = "stablehlo.multiply"(%1748, %1748) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1768 = "stablehlo.multiply"(%1766, %1767) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1769 = "stablehlo.add"(%1765, %1768) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1770 = "stablehlo.constant"() {
+value = dense<9.990000e-01> : tensor<f32>
+} : () -> (tensor<f32>)
+%1771 = "stablehlo.power"(%1770, %572) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+%1772 = "stablehlo.subtract"(%1673, %1771) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+%1773 = "stablehlo.broadcast_in_dim"(%1772) {
+broadcast_dimensions = array<i64>
+} : (tensor<f32>) -> (tensor<784x512xf32>)
+%1774 = "stablehlo.divide"(%1769, %1773) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1775 = "stablehlo.constant"() {
+value = dense<5.000000e-01> : tensor<784x512xf32>
+} : () -> (tensor<784x512xf32>)
+%1776 = "stablehlo.power"(%1774, %1775) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1777 = "stablehlo.constant"() {
+value = dense<1.000000e-08> : tensor<784x512xf32>
+} : () -> (tensor<784x512xf32>)
+%1778 = "stablehlo.add"(%1776, %1777) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1779 = "stablehlo.divide"(%1763, %1778) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1780 = "stablehlo.subtract"(%1751, %1779) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1781 = "stablehlo.multiply"(%1454, %1695) : (tensor<128x784x512xf32>, tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1782 = "stablehlo.reduce"(%1781, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x784x512xf32>, tensor<f32>) -> (tensor<784x512xf32>)
+%1783 = "stablehlo.multiply"(%1454, %1703) : (tensor<128x784x512xf32>, tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1784 = "stablehlo.reduce"(%1783, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x784x512xf32>, tensor<f32>) -> (tensor<784x512xf32>)
+%1785 = "stablehlo.add"(%1782, %1784) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1786 = "stablehlo.subtract"(%1668, %1785) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1787 = "stablehlo.add"(%1786, %1786) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1788 = "stablehlo.multiply"(%1454, %1718) : (tensor<128x784x512xf32>, tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1789 = "stablehlo.reduce"(%1788, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x784x512xf32>, tensor<f32>) -> (tensor<784x512xf32>)
+%1790 = "stablehlo.multiply"(%1454, %1725) : (tensor<128x784x512xf32>, tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1791 = "stablehlo.reduce"(%1790, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x784x512xf32>, tensor<f32>) -> (tensor<784x512xf32>)
+%1792 = "stablehlo.add"(%1791, %1791) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1793 = "stablehlo.subtract"(%1789, %1792) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1794 = "stablehlo.multiply"(%1454, %1734) : (tensor<128x784x512xf32>, tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1795 = "stablehlo.reduce"(%1794, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x784x512xf32>, tensor<f32>) -> (tensor<784x512xf32>)
+%1796 = "stablehlo.subtract"(%1793, %1795) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1797 = "stablehlo.add"(%1787, %1796) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1798 = "stablehlo.divide"(%1743, %1537) : (tensor<128x784x512xf32>, tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1799 = "stablehlo.multiply"(%1536, %1798) : (tensor<128x784x512xf32>, tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1800 = "stablehlo.reduce"(%1799, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x784x512xf32>, tensor<f32>) -> (tensor<784x512xf32>)
+%1801 = "stablehlo.multiply"(%1536, %1743) : (tensor<128x784x512xf32>, tensor<128x784x512xf32>) -> (tensor<128x784x512xf32>)
+%1802 = "stablehlo.reduce"(%1801, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x784x512xf32>, tensor<f32>) -> (tensor<784x512xf32>)
+%1803 = "stablehlo.subtract"(%1800, %1802) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1804 = "stablehlo.add"(%1797, %1803) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1805 = "stablehlo.multiply"(%1804, %1749) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1806 = "stablehlo.subtract"(%591, %1805) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1807 = "stablehlo.multiply"(%1753, %570) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1808 = "stablehlo.multiply"(%1755, %1804) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1809 = "stablehlo.add"(%1807, %1808) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1810 = "stablehlo.divide"(%1809, %1761) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1811 = "stablehlo.multiply"(%1752, %1810) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1812 = "stablehlo.multiply"(%1764, %550) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1813 = "stablehlo.multiply"(%1804, %1804) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1814 = "stablehlo.multiply"(%1766, %1813) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1815 = "stablehlo.add"(%1812, %1814) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1816 = "stablehlo.divide"(%1815, %1773) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1817 = "stablehlo.power"(%1816, %1775) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1818 = "stablehlo.add"(%1817, %1777) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1819 = "stablehlo.divide"(%1811, %1818) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1820 = "stablehlo.subtract"(%1806, %1819) : (tensor<784x512xf32>, tensor<784x512xf32>) -> (tensor<784x512xf32>)
+%1821 = "stablehlo.constant"() {
+value = dense<0.000000e+00> : tensor<1x512xf32>
+} : () -> (tensor<1x512xf32>)
+%1822 = "stablehlo.reduce"(%1694, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x512xf32>, tensor<f32>) -> (tensor<1x512xf32>)
+%1823 = "stablehlo.reduce"(%1702, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x512xf32>, tensor<f32>) -> (tensor<1x512xf32>)
+%1824 = "stablehlo.add"(%1822, %1823) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1825 = "stablehlo.subtract"(%1821, %1824) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1826 = "stablehlo.add"(%1825, %1825) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1827 = "stablehlo.reduce"(%1717, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x512xf32>, tensor<f32>) -> (tensor<1x512xf32>)
+%1828 = "stablehlo.reduce"(%1724, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x512xf32>, tensor<f32>) -> (tensor<1x512xf32>)
+%1829 = "stablehlo.add"(%1828, %1828) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1830 = "stablehlo.subtract"(%1827, %1829) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1831 = "stablehlo.reduce"(%1733, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x512xf32>, tensor<f32>) -> (tensor<1x512xf32>)
+%1832 = "stablehlo.subtract"(%1830, %1831) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1833 = "stablehlo.add"(%1826, %1832) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1834 = "stablehlo.divide"(%1739, %1559) : (tensor<512xf32>, tensor<512xf32>) -> (tensor<512xf32>)
+%1835 = "stablehlo.broadcast_in_dim"(%1834) {
+broadcast_dimensions = array<i64: 2>
+} : (tensor<512xf32>) -> (tensor<128x1x512xf32>)
+%1836 = "stablehlo.transpose"(%1835) {
+permutation = array<i64: 0,1,2>
+} : (tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1837 = "stablehlo.multiply"(%1548, %1836) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1838 = "stablehlo.multiply"(%1458, %1837) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1839 = "stablehlo.reduce"(%1838, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x512xf32>, tensor<f32>) -> (tensor<1x512xf32>)
+%1840 = "stablehlo.add"(%1839, %1839) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1841 = "stablehlo.subtract"(%1821, %1840) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1842 = "stablehlo.add"(%1833, %1841) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1843 = "stablehlo.constant"() {
+value = dense<1.000000e-06> : tensor<1x512xf32>
+} : () -> (tensor<1x512xf32>)
+%1844 = "stablehlo.multiply"(%1842, %1843) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1845 = "stablehlo.subtract"(%590, %1844) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1846 = "stablehlo.constant"() {
+value = dense<1.000000e-04> : tensor<1x512xf32>
+} : () -> (tensor<1x512xf32>)
+%1847 = "stablehlo.constant"() {
+value = dense<9.000000e-01> : tensor<1x512xf32>
+} : () -> (tensor<1x512xf32>)
+%1848 = "stablehlo.multiply"(%1847, %569) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1849 = "stablehlo.constant"() {
+value = dense<1.000000e-01> : tensor<1x512xf32>
+} : () -> (tensor<1x512xf32>)
+%1850 = "stablehlo.multiply"(%1849, %1842) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1851 = "stablehlo.add"(%1848, %1850) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1852 = "stablehlo.broadcast_in_dim"(%1760) {
+broadcast_dimensions = array<i64>
+} : (tensor<f32>) -> (tensor<1x512xf32>)
+%1853 = "stablehlo.divide"(%1851, %1852) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1854 = "stablehlo.multiply"(%1846, %1853) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1855 = "stablehlo.constant"() {
+value = dense<9.990000e-01> : tensor<1x512xf32>
+} : () -> (tensor<1x512xf32>)
+%1856 = "stablehlo.multiply"(%1855, %549) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1857 = "stablehlo.constant"() {
+value = dense<1.000000e-03> : tensor<1x512xf32>
+} : () -> (tensor<1x512xf32>)
+%1858 = "stablehlo.multiply"(%1842, %1842) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1859 = "stablehlo.multiply"(%1857, %1858) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1860 = "stablehlo.add"(%1856, %1859) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1861 = "stablehlo.broadcast_in_dim"(%1772) {
+broadcast_dimensions = array<i64>
+} : (tensor<f32>) -> (tensor<1x512xf32>)
+%1862 = "stablehlo.divide"(%1860, %1861) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1863 = "stablehlo.constant"() {
+value = dense<5.000000e-01> : tensor<1x512xf32>
+} : () -> (tensor<1x512xf32>)
+%1864 = "stablehlo.power"(%1862, %1863) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1865 = "stablehlo.constant"() {
+value = dense<1.000000e-08> : tensor<1x512xf32>
+} : () -> (tensor<1x512xf32>)
+%1866 = "stablehlo.add"(%1864, %1865) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1867 = "stablehlo.divide"(%1854, %1866) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1868 = "stablehlo.subtract"(%1845, %1867) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1869 = "stablehlo.multiply"(%1459, %1694) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1870 = "stablehlo.reduce"(%1869, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x512xf32>, tensor<f32>) -> (tensor<1x512xf32>)
+%1871 = "stablehlo.multiply"(%1459, %1702) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1872 = "stablehlo.reduce"(%1871, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x512xf32>, tensor<f32>) -> (tensor<1x512xf32>)
+%1873 = "stablehlo.add"(%1870, %1872) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1874 = "stablehlo.subtract"(%1821, %1873) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1875 = "stablehlo.add"(%1874, %1874) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1876 = "stablehlo.multiply"(%1459, %1717) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1877 = "stablehlo.reduce"(%1876, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x512xf32>, tensor<f32>) -> (tensor<1x512xf32>)
+%1878 = "stablehlo.multiply"(%1459, %1724) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1879 = "stablehlo.reduce"(%1878, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x512xf32>, tensor<f32>) -> (tensor<1x512xf32>)
+%1880 = "stablehlo.add"(%1879, %1879) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1881 = "stablehlo.subtract"(%1877, %1880) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1882 = "stablehlo.multiply"(%1459, %1733) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1883 = "stablehlo.reduce"(%1882, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x512xf32>, tensor<f32>) -> (tensor<1x512xf32>)
+%1884 = "stablehlo.subtract"(%1881, %1883) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1885 = "stablehlo.add"(%1875, %1884) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1886 = "stablehlo.divide"(%1837, %1551) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1887 = "stablehlo.multiply"(%1550, %1886) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1888 = "stablehlo.reduce"(%1887, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x512xf32>, tensor<f32>) -> (tensor<1x512xf32>)
+%1889 = "stablehlo.multiply"(%1550, %1837) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%1890 = "stablehlo.reduce"(%1889, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x512xf32>, tensor<f32>) -> (tensor<1x512xf32>)
+%1891 = "stablehlo.subtract"(%1888, %1890) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1892 = "stablehlo.add"(%1885, %1891) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1893 = "stablehlo.multiply"(%1892, %1843) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1894 = "stablehlo.subtract"(%589, %1893) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1895 = "stablehlo.multiply"(%1847, %568) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1896 = "stablehlo.multiply"(%1849, %1892) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1897 = "stablehlo.add"(%1895, %1896) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1898 = "stablehlo.divide"(%1897, %1852) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1899 = "stablehlo.multiply"(%1846, %1898) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1900 = "stablehlo.multiply"(%1855, %548) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1901 = "stablehlo.multiply"(%1892, %1892) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1902 = "stablehlo.multiply"(%1857, %1901) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1903 = "stablehlo.add"(%1900, %1902) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1904 = "stablehlo.divide"(%1903, %1861) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1905 = "stablehlo.power"(%1904, %1863) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1906 = "stablehlo.add"(%1905, %1865) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1907 = "stablehlo.divide"(%1899, %1906) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1908 = "stablehlo.subtract"(%1894, %1907) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%1909 = "stablehlo.constant"() {
+value = dense<0.000000e+00> : tensor<512x16xf32>
+} : () -> (tensor<512x16xf32>)
+%1910 = "stablehlo.dot_general"(%1464, %1690) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [1],
+rhs_contracting_dimensions = [1]
+>
+} : (tensor<128x1x512xf32>, tensor<128x1x16xf32>) -> (tensor<128x512x16xf32>)
+%1911 = "stablehlo.transpose"(%1910) {
+permutation = array<i64: 0,1,2>
+} : (tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1912 = "stablehlo.reduce"(%1911, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x512x16xf32>, tensor<f32>) -> (tensor<512x16xf32>)
+%1913 = "stablehlo.subtract"(%1909, %1912) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1914 = "stablehlo.add"(%1913, %1913) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1915 = "stablehlo.dot_general"(%1464, %1722) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [1],
+rhs_contracting_dimensions = [1]
+>
+} : (tensor<128x1x512xf32>, tensor<128x1x16xf32>) -> (tensor<128x512x16xf32>)
+%1916 = "stablehlo.transpose"(%1915) {
+permutation = array<i64: 0,1,2>
+} : (tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1917 = "stablehlo.reduce"(%1916, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x512x16xf32>, tensor<f32>) -> (tensor<512x16xf32>)
+%1918 = "stablehlo.add"(%1917, %1917) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1919 = "stablehlo.subtract"(%1909, %1918) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1920 = "stablehlo.add"(%1914, %1919) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1921 = "stablehlo.divide"(%1711, %1574) : (tensor<16xf32>, tensor<16xf32>) -> (tensor<16xf32>)
+%1922 = "stablehlo.broadcast_in_dim"(%1921) {
+broadcast_dimensions = array<i64: 2>
+} : (tensor<16xf32>) -> (tensor<128x512x16xf32>)
+%1923 = "stablehlo.transpose"(%1922) {
+permutation = array<i64: 0,1,2>
+} : (tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1924 = "stablehlo.multiply"(%1563, %1923) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1925 = "stablehlo.multiply"(%1465, %1924) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1926 = "stablehlo.reduce"(%1925, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x512x16xf32>, tensor<f32>) -> (tensor<512x16xf32>)
+%1927 = "stablehlo.add"(%1926, %1926) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1928 = "stablehlo.subtract"(%1909, %1927) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1929 = "stablehlo.add"(%1920, %1928) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1930 = "stablehlo.constant"() {
+value = dense<1.000000e-06> : tensor<512x16xf32>
+} : () -> (tensor<512x16xf32>)
+%1931 = "stablehlo.multiply"(%1929, %1930) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1932 = "stablehlo.subtract"(%588, %1931) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1933 = "stablehlo.constant"() {
+value = dense<1.000000e-04> : tensor<512x16xf32>
+} : () -> (tensor<512x16xf32>)
+%1934 = "stablehlo.constant"() {
+value = dense<9.000000e-01> : tensor<512x16xf32>
+} : () -> (tensor<512x16xf32>)
+%1935 = "stablehlo.multiply"(%1934, %567) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1936 = "stablehlo.constant"() {
+value = dense<1.000000e-01> : tensor<512x16xf32>
+} : () -> (tensor<512x16xf32>)
+%1937 = "stablehlo.multiply"(%1936, %1929) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1938 = "stablehlo.add"(%1935, %1937) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1939 = "stablehlo.broadcast_in_dim"(%1760) {
+broadcast_dimensions = array<i64>
+} : (tensor<f32>) -> (tensor<512x16xf32>)
+%1940 = "stablehlo.divide"(%1938, %1939) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1941 = "stablehlo.multiply"(%1933, %1940) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1942 = "stablehlo.constant"() {
+value = dense<9.990000e-01> : tensor<512x16xf32>
+} : () -> (tensor<512x16xf32>)
+%1943 = "stablehlo.multiply"(%1942, %547) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1944 = "stablehlo.constant"() {
+value = dense<1.000000e-03> : tensor<512x16xf32>
+} : () -> (tensor<512x16xf32>)
+%1945 = "stablehlo.multiply"(%1929, %1929) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1946 = "stablehlo.multiply"(%1944, %1945) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1947 = "stablehlo.add"(%1943, %1946) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1948 = "stablehlo.broadcast_in_dim"(%1772) {
+broadcast_dimensions = array<i64>
+} : (tensor<f32>) -> (tensor<512x16xf32>)
+%1949 = "stablehlo.divide"(%1947, %1948) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1950 = "stablehlo.constant"() {
+value = dense<5.000000e-01> : tensor<512x16xf32>
+} : () -> (tensor<512x16xf32>)
+%1951 = "stablehlo.power"(%1949, %1950) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1952 = "stablehlo.constant"() {
+value = dense<1.000000e-08> : tensor<512x16xf32>
+} : () -> (tensor<512x16xf32>)
+%1953 = "stablehlo.add"(%1951, %1952) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1954 = "stablehlo.divide"(%1941, %1953) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1955 = "stablehlo.subtract"(%1932, %1954) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1956 = "stablehlo.multiply"(%1466, %1911) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1957 = "stablehlo.reduce"(%1956, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x512x16xf32>, tensor<f32>) -> (tensor<512x16xf32>)
+%1958 = "stablehlo.subtract"(%1909, %1957) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1959 = "stablehlo.add"(%1958, %1958) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1960 = "stablehlo.multiply"(%1466, %1916) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1961 = "stablehlo.reduce"(%1960, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x512x16xf32>, tensor<f32>) -> (tensor<512x16xf32>)
+%1962 = "stablehlo.add"(%1961, %1961) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1963 = "stablehlo.subtract"(%1909, %1962) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1964 = "stablehlo.add"(%1959, %1963) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1965 = "stablehlo.divide"(%1924, %1566) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1966 = "stablehlo.multiply"(%1565, %1965) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1967 = "stablehlo.reduce"(%1966, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x512x16xf32>, tensor<f32>) -> (tensor<512x16xf32>)
+%1968 = "stablehlo.multiply"(%1565, %1924) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%1969 = "stablehlo.reduce"(%1968, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x512x16xf32>, tensor<f32>) -> (tensor<512x16xf32>)
+%1970 = "stablehlo.subtract"(%1967, %1969) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1971 = "stablehlo.add"(%1964, %1970) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1972 = "stablehlo.multiply"(%1971, %1930) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1973 = "stablehlo.subtract"(%587, %1972) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1974 = "stablehlo.multiply"(%1934, %566) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1975 = "stablehlo.multiply"(%1936, %1971) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1976 = "stablehlo.add"(%1974, %1975) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1977 = "stablehlo.divide"(%1976, %1939) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1978 = "stablehlo.multiply"(%1933, %1977) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1979 = "stablehlo.multiply"(%1942, %546) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1980 = "stablehlo.multiply"(%1971, %1971) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1981 = "stablehlo.multiply"(%1944, %1980) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1982 = "stablehlo.add"(%1979, %1981) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1983 = "stablehlo.divide"(%1982, %1948) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1984 = "stablehlo.power"(%1983, %1950) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1985 = "stablehlo.add"(%1984, %1952) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1986 = "stablehlo.divide"(%1978, %1985) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1987 = "stablehlo.subtract"(%1973, %1986) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%1988 = "stablehlo.constant"() {
+value = dense<0.000000e+00> : tensor<1x16xf32>
+} : () -> (tensor<1x16xf32>)
+%1989 = "stablehlo.reduce"(%1690, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x16xf32>, tensor<f32>) -> (tensor<1x16xf32>)
+%1990 = "stablehlo.subtract"(%1988, %1989) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%1991 = "stablehlo.add"(%1990, %1990) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%1992 = "stablehlo.reduce"(%1722, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x16xf32>, tensor<f32>) -> (tensor<1x16xf32>)
+%1993 = "stablehlo.add"(%1992, %1992) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%1994 = "stablehlo.subtract"(%1988, %1993) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%1995 = "stablehlo.add"(%1991, %1994) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%1996 = "stablehlo.multiply"(%1470, %1715) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%1997 = "stablehlo.reduce"(%1996, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x16xf32>, tensor<f32>) -> (tensor<1x16xf32>)
+%1998 = "stablehlo.add"(%1997, %1997) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%1999 = "stablehlo.subtract"(%1988, %1998) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2000 = "stablehlo.add"(%1995, %1999) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2001 = "stablehlo.constant"() {
+value = dense<1.000000e-06> : tensor<1x16xf32>
+} : () -> (tensor<1x16xf32>)
+%2002 = "stablehlo.multiply"(%2000, %2001) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2003 = "stablehlo.subtract"(%586, %2002) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2004 = "stablehlo.constant"() {
+value = dense<1.000000e-04> : tensor<1x16xf32>
+} : () -> (tensor<1x16xf32>)
+%2005 = "stablehlo.constant"() {
+value = dense<9.000000e-01> : tensor<1x16xf32>
+} : () -> (tensor<1x16xf32>)
+%2006 = "stablehlo.multiply"(%2005, %565) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2007 = "stablehlo.constant"() {
+value = dense<1.000000e-01> : tensor<1x16xf32>
+} : () -> (tensor<1x16xf32>)
+%2008 = "stablehlo.multiply"(%2007, %2000) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2009 = "stablehlo.add"(%2006, %2008) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2010 = "stablehlo.broadcast_in_dim"(%1760) {
+broadcast_dimensions = array<i64>
+} : (tensor<f32>) -> (tensor<1x16xf32>)
+%2011 = "stablehlo.divide"(%2009, %2010) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2012 = "stablehlo.multiply"(%2004, %2011) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2013 = "stablehlo.constant"() {
+value = dense<9.990000e-01> : tensor<1x16xf32>
+} : () -> (tensor<1x16xf32>)
+%2014 = "stablehlo.multiply"(%2013, %545) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2015 = "stablehlo.constant"() {
+value = dense<1.000000e-03> : tensor<1x16xf32>
+} : () -> (tensor<1x16xf32>)
+%2016 = "stablehlo.multiply"(%2000, %2000) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2017 = "stablehlo.multiply"(%2015, %2016) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2018 = "stablehlo.add"(%2014, %2017) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2019 = "stablehlo.broadcast_in_dim"(%1772) {
+broadcast_dimensions = array<i64>
+} : (tensor<f32>) -> (tensor<1x16xf32>)
+%2020 = "stablehlo.divide"(%2018, %2019) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2021 = "stablehlo.constant"() {
+value = dense<5.000000e-01> : tensor<1x16xf32>
+} : () -> (tensor<1x16xf32>)
+%2022 = "stablehlo.power"(%2020, %2021) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2023 = "stablehlo.constant"() {
+value = dense<1.000000e-08> : tensor<1x16xf32>
+} : () -> (tensor<1x16xf32>)
+%2024 = "stablehlo.add"(%2022, %2023) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2025 = "stablehlo.divide"(%2012, %2024) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2026 = "stablehlo.subtract"(%2003, %2025) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2027 = "stablehlo.reduce"(%1699, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x16xf32>, tensor<f32>) -> (tensor<1x16xf32>)
+%2028 = "stablehlo.subtract"(%1988, %2027) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2029 = "stablehlo.add"(%2028, %2028) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2030 = "stablehlo.multiply"(%1471, %1722) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%2031 = "stablehlo.reduce"(%2030, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x16xf32>, tensor<f32>) -> (tensor<1x16xf32>)
+%2032 = "stablehlo.add"(%2031, %2031) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2033 = "stablehlo.subtract"(%1988, %2032) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2034 = "stablehlo.add"(%2029, %2033) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2035 = "stablehlo.divide"(%1715, %1578) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%2036 = "stablehlo.multiply"(%1577, %2035) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%2037 = "stablehlo.reduce"(%2036, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x16xf32>, tensor<f32>) -> (tensor<1x16xf32>)
+%2038 = "stablehlo.multiply"(%1577, %1715) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%2039 = "stablehlo.reduce"(%2038, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x16xf32>, tensor<f32>) -> (tensor<1x16xf32>)
+%2040 = "stablehlo.subtract"(%2037, %2039) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2041 = "stablehlo.add"(%2034, %2040) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2042 = "stablehlo.multiply"(%2041, %2001) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2043 = "stablehlo.subtract"(%585, %2042) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2044 = "stablehlo.multiply"(%2005, %564) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2045 = "stablehlo.multiply"(%2007, %2041) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2046 = "stablehlo.add"(%2044, %2045) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2047 = "stablehlo.divide"(%2046, %2010) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2048 = "stablehlo.multiply"(%2004, %2047) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2049 = "stablehlo.multiply"(%2013, %544) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2050 = "stablehlo.multiply"(%2041, %2041) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2051 = "stablehlo.multiply"(%2015, %2050) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2052 = "stablehlo.add"(%2049, %2051) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2053 = "stablehlo.divide"(%2052, %2019) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2054 = "stablehlo.power"(%2053, %2021) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2055 = "stablehlo.add"(%2054, %2023) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2056 = "stablehlo.divide"(%2048, %2055) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2057 = "stablehlo.subtract"(%2043, %2056) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2058 = "stablehlo.dot_general"(%1464, %1700) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [1],
+rhs_contracting_dimensions = [1]
+>
+} : (tensor<128x1x512xf32>, tensor<128x1x16xf32>) -> (tensor<128x512x16xf32>)
+%2059 = "stablehlo.transpose"(%2058) {
+permutation = array<i64: 0,1,2>
+} : (tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%2060 = "stablehlo.reduce"(%2059, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x512x16xf32>, tensor<f32>) -> (tensor<512x16xf32>)
+%2061 = "stablehlo.subtract"(%1909, %2060) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2062 = "stablehlo.add"(%2061, %2061) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2063 = "stablehlo.dot_general"(%1464, %1715) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [1],
+rhs_contracting_dimensions = [1]
+>
+} : (tensor<128x1x512xf32>, tensor<128x1x16xf32>) -> (tensor<128x512x16xf32>)
+%2064 = "stablehlo.transpose"(%2063) {
+permutation = array<i64: 0,1,2>
+} : (tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%2065 = "stablehlo.reduce"(%2064, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x512x16xf32>, tensor<f32>) -> (tensor<512x16xf32>)
+%2066 = "stablehlo.dot_general"(%1464, %1731) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [1],
+rhs_contracting_dimensions = [1]
+>
+} : (tensor<128x1x512xf32>, tensor<128x1x16xf32>) -> (tensor<128x512x16xf32>)
+%2067 = "stablehlo.transpose"(%2066) {
+permutation = array<i64: 0,1,2>
+} : (tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%2068 = "stablehlo.reduce"(%2067, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x512x16xf32>, tensor<f32>) -> (tensor<512x16xf32>)
+%2069 = "stablehlo.subtract"(%2065, %2068) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2070 = "stablehlo.add"(%2062, %2069) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2071 = "stablehlo.multiply"(%1477, %1924) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%2072 = "stablehlo.reduce"(%2071, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x512x16xf32>, tensor<f32>) -> (tensor<512x16xf32>)
+%2073 = "stablehlo.add"(%2072, %2072) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2074 = "stablehlo.subtract"(%1909, %2073) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2075 = "stablehlo.add"(%2070, %2074) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2076 = "stablehlo.multiply"(%2075, %1930) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2077 = "stablehlo.subtract"(%584, %2076) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2078 = "stablehlo.multiply"(%1934, %563) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2079 = "stablehlo.multiply"(%1936, %2075) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2080 = "stablehlo.add"(%2078, %2079) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2081 = "stablehlo.divide"(%2080, %1939) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2082 = "stablehlo.multiply"(%1933, %2081) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2083 = "stablehlo.multiply"(%1942, %543) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2084 = "stablehlo.multiply"(%2075, %2075) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2085 = "stablehlo.multiply"(%1944, %2084) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2086 = "stablehlo.add"(%2083, %2085) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2087 = "stablehlo.divide"(%2086, %1948) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2088 = "stablehlo.power"(%2087, %1950) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2089 = "stablehlo.add"(%2088, %1952) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2090 = "stablehlo.divide"(%2082, %2089) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2091 = "stablehlo.subtract"(%2077, %2090) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2092 = "stablehlo.multiply"(%1466, %2059) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%2093 = "stablehlo.reduce"(%2092, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x512x16xf32>, tensor<f32>) -> (tensor<512x16xf32>)
+%2094 = "stablehlo.subtract"(%1909, %2093) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2095 = "stablehlo.add"(%2094, %2094) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2096 = "stablehlo.multiply"(%1466, %2064) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%2097 = "stablehlo.reduce"(%2096, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x512x16xf32>, tensor<f32>) -> (tensor<512x16xf32>)
+%2098 = "stablehlo.multiply"(%1466, %2067) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%2099 = "stablehlo.reduce"(%2098, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x512x16xf32>, tensor<f32>) -> (tensor<512x16xf32>)
+%2100 = "stablehlo.subtract"(%2097, %2099) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2101 = "stablehlo.add"(%2095, %2100) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2102 = "stablehlo.divide"(%1924, %1590) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%2103 = "stablehlo.multiply"(%1565, %2102) : (tensor<128x512x16xf32>, tensor<128x512x16xf32>) -> (tensor<128x512x16xf32>)
+%2104 = "stablehlo.reduce"(%2103, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x512x16xf32>, tensor<f32>) -> (tensor<512x16xf32>)
+%2105 = "stablehlo.subtract"(%2104, %1969) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2106 = "stablehlo.add"(%2101, %2105) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2107 = "stablehlo.multiply"(%2106, %1930) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2108 = "stablehlo.subtract"(%583, %2107) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2109 = "stablehlo.multiply"(%1934, %562) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2110 = "stablehlo.multiply"(%1936, %2106) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2111 = "stablehlo.add"(%2109, %2110) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2112 = "stablehlo.divide"(%2111, %1939) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2113 = "stablehlo.multiply"(%1933, %2112) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2114 = "stablehlo.multiply"(%1942, %542) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2115 = "stablehlo.multiply"(%2106, %2106) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2116 = "stablehlo.multiply"(%1944, %2115) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2117 = "stablehlo.add"(%2114, %2116) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2118 = "stablehlo.divide"(%2117, %1948) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2119 = "stablehlo.power"(%2118, %1950) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2120 = "stablehlo.add"(%2119, %1952) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2121 = "stablehlo.divide"(%2113, %2120) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2122 = "stablehlo.subtract"(%2108, %2121) : (tensor<512x16xf32>, tensor<512x16xf32>) -> (tensor<512x16xf32>)
+%2123 = "stablehlo.reduce"(%1700, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x16xf32>, tensor<f32>) -> (tensor<1x16xf32>)
+%2124 = "stablehlo.subtract"(%1988, %2123) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2125 = "stablehlo.add"(%2124, %2124) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2126 = "stablehlo.reduce"(%1715, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x16xf32>, tensor<f32>) -> (tensor<1x16xf32>)
+%2127 = "stablehlo.reduce"(%1731, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x16xf32>, tensor<f32>) -> (tensor<1x16xf32>)
+%2128 = "stablehlo.subtract"(%2126, %2127) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2129 = "stablehlo.add"(%2125, %2128) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2130 = "stablehlo.multiply"(%1481, %1715) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%2131 = "stablehlo.reduce"(%2130, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x16xf32>, tensor<f32>) -> (tensor<1x16xf32>)
+%2132 = "stablehlo.add"(%2131, %2131) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2133 = "stablehlo.subtract"(%1988, %2132) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2134 = "stablehlo.add"(%2129, %2133) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2135 = "stablehlo.multiply"(%2134, %2001) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2136 = "stablehlo.subtract"(%582, %2135) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2137 = "stablehlo.multiply"(%2005, %561) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2138 = "stablehlo.multiply"(%2007, %2134) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2139 = "stablehlo.add"(%2137, %2138) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2140 = "stablehlo.divide"(%2139, %2010) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2141 = "stablehlo.multiply"(%2004, %2140) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2142 = "stablehlo.multiply"(%2013, %541) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2143 = "stablehlo.multiply"(%2134, %2134) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2144 = "stablehlo.multiply"(%2015, %2143) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2145 = "stablehlo.add"(%2142, %2144) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2146 = "stablehlo.divide"(%2145, %2019) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2147 = "stablehlo.power"(%2146, %2021) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2148 = "stablehlo.add"(%2147, %2023) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2149 = "stablehlo.divide"(%2141, %2148) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2150 = "stablehlo.subtract"(%2136, %2149) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2151 = "stablehlo.multiply"(%1471, %1700) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%2152 = "stablehlo.reduce"(%2151, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x16xf32>, tensor<f32>) -> (tensor<1x16xf32>)
+%2153 = "stablehlo.subtract"(%1988, %2152) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2154 = "stablehlo.add"(%2153, %2153) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2155 = "stablehlo.multiply"(%1471, %1715) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%2156 = "stablehlo.reduce"(%2155, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x16xf32>, tensor<f32>) -> (tensor<1x16xf32>)
+%2157 = "stablehlo.multiply"(%1471, %1731) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%2158 = "stablehlo.reduce"(%2157, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x16xf32>, tensor<f32>) -> (tensor<1x16xf32>)
+%2159 = "stablehlo.subtract"(%2156, %2158) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2160 = "stablehlo.add"(%2154, %2159) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2161 = "stablehlo.divide"(%1715, %1600) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%2162 = "stablehlo.multiply"(%1577, %2161) : (tensor<128x1x16xf32>, tensor<128x1x16xf32>) -> (tensor<128x1x16xf32>)
+%2163 = "stablehlo.reduce"(%2162, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x16xf32>, tensor<f32>) -> (tensor<1x16xf32>)
+%2164 = "stablehlo.subtract"(%2163, %2039) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2165 = "stablehlo.add"(%2160, %2164) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2166 = "stablehlo.multiply"(%2165, %2001) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2167 = "stablehlo.subtract"(%581, %2166) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2168 = "stablehlo.multiply"(%2005, %560) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2169 = "stablehlo.multiply"(%2007, %2165) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2170 = "stablehlo.add"(%2168, %2169) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2171 = "stablehlo.divide"(%2170, %2010) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2172 = "stablehlo.multiply"(%2004, %2171) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2173 = "stablehlo.multiply"(%2013, %540) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2174 = "stablehlo.multiply"(%2165, %2165) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2175 = "stablehlo.multiply"(%2015, %2174) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2176 = "stablehlo.add"(%2173, %2175) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2177 = "stablehlo.divide"(%2176, %2019) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2178 = "stablehlo.power"(%2177, %2021) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2179 = "stablehlo.add"(%2178, %2023) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2180 = "stablehlo.divide"(%2172, %2179) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2181 = "stablehlo.subtract"(%2167, %2180) : (tensor<1x16xf32>, tensor<1x16xf32>) -> (tensor<1x16xf32>)
+%2182 = "stablehlo.constant"() {
+value = dense<0.000000e+00> : tensor<16x512xf32>
+} : () -> (tensor<16x512xf32>)
+%2183 = "stablehlo.dot_general"(%1488, %1689) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [1],
+rhs_contracting_dimensions = [1]
+>
+} : (tensor<128x1x16xf32>, tensor<128x1x512xf32>) -> (tensor<128x16x512xf32>)
+%2184 = "stablehlo.transpose"(%2183) {
+permutation = array<i64: 0,1,2>
+} : (tensor<128x16x512xf32>) -> (tensor<128x16x512xf32>)
+%2185 = "stablehlo.reduce"(%2184, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x16x512xf32>, tensor<f32>) -> (tensor<16x512xf32>)
+%2186 = "stablehlo.subtract"(%2182, %2185) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2187 = "stablehlo.add"(%2186, %2186) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2188 = "stablehlo.divide"(%1739, %1624) : (tensor<512xf32>, tensor<512xf32>) -> (tensor<512xf32>)
+%2189 = "stablehlo.broadcast_in_dim"(%2188) {
+broadcast_dimensions = array<i64: 2>
+} : (tensor<512xf32>) -> (tensor<128x16x512xf32>)
+%2190 = "stablehlo.transpose"(%2189) {
+permutation = array<i64: 0,1,2>
+} : (tensor<128x16x512xf32>) -> (tensor<128x16x512xf32>)
+%2191 = "stablehlo.multiply"(%1613, %2190) : (tensor<128x16x512xf32>, tensor<128x16x512xf32>) -> (tensor<128x16x512xf32>)
+%2192 = "stablehlo.multiply"(%1489, %2191) : (tensor<128x16x512xf32>, tensor<128x16x512xf32>) -> (tensor<128x16x512xf32>)
+%2193 = "stablehlo.reduce"(%2192, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x16x512xf32>, tensor<f32>) -> (tensor<16x512xf32>)
+%2194 = "stablehlo.add"(%2193, %2193) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2195 = "stablehlo.subtract"(%2182, %2194) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2196 = "stablehlo.add"(%2187, %2195) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2197 = "stablehlo.constant"() {
+value = dense<1.000000e-06> : tensor<16x512xf32>
+} : () -> (tensor<16x512xf32>)
+%2198 = "stablehlo.multiply"(%2196, %2197) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2199 = "stablehlo.subtract"(%580, %2198) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2200 = "stablehlo.constant"() {
+value = dense<1.000000e-04> : tensor<16x512xf32>
+} : () -> (tensor<16x512xf32>)
+%2201 = "stablehlo.constant"() {
+value = dense<9.000000e-01> : tensor<16x512xf32>
+} : () -> (tensor<16x512xf32>)
+%2202 = "stablehlo.multiply"(%2201, %559) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2203 = "stablehlo.constant"() {
+value = dense<1.000000e-01> : tensor<16x512xf32>
+} : () -> (tensor<16x512xf32>)
+%2204 = "stablehlo.multiply"(%2203, %2196) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2205 = "stablehlo.add"(%2202, %2204) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2206 = "stablehlo.broadcast_in_dim"(%1760) {
+broadcast_dimensions = array<i64>
+} : (tensor<f32>) -> (tensor<16x512xf32>)
+%2207 = "stablehlo.divide"(%2205, %2206) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2208 = "stablehlo.multiply"(%2200, %2207) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2209 = "stablehlo.constant"() {
+value = dense<9.990000e-01> : tensor<16x512xf32>
+} : () -> (tensor<16x512xf32>)
+%2210 = "stablehlo.multiply"(%2209, %539) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2211 = "stablehlo.constant"() {
+value = dense<1.000000e-03> : tensor<16x512xf32>
+} : () -> (tensor<16x512xf32>)
+%2212 = "stablehlo.multiply"(%2196, %2196) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2213 = "stablehlo.multiply"(%2211, %2212) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2214 = "stablehlo.add"(%2210, %2213) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2215 = "stablehlo.broadcast_in_dim"(%1772) {
+broadcast_dimensions = array<i64>
+} : (tensor<f32>) -> (tensor<16x512xf32>)
+%2216 = "stablehlo.divide"(%2214, %2215) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2217 = "stablehlo.constant"() {
+value = dense<5.000000e-01> : tensor<16x512xf32>
+} : () -> (tensor<16x512xf32>)
+%2218 = "stablehlo.power"(%2216, %2217) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2219 = "stablehlo.constant"() {
+value = dense<1.000000e-08> : tensor<16x512xf32>
+} : () -> (tensor<16x512xf32>)
+%2220 = "stablehlo.add"(%2218, %2219) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2221 = "stablehlo.divide"(%2208, %2220) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2222 = "stablehlo.subtract"(%2199, %2221) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2223 = "stablehlo.multiply"(%1490, %2184) : (tensor<128x16x512xf32>, tensor<128x16x512xf32>) -> (tensor<128x16x512xf32>)
+%2224 = "stablehlo.reduce"(%2223, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x16x512xf32>, tensor<f32>) -> (tensor<16x512xf32>)
+%2225 = "stablehlo.subtract"(%2182, %2224) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2226 = "stablehlo.add"(%2225, %2225) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2227 = "stablehlo.divide"(%2191, %1616) : (tensor<128x16x512xf32>, tensor<128x16x512xf32>) -> (tensor<128x16x512xf32>)
+%2228 = "stablehlo.multiply"(%1615, %2227) : (tensor<128x16x512xf32>, tensor<128x16x512xf32>) -> (tensor<128x16x512xf32>)
+%2229 = "stablehlo.reduce"(%2228, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x16x512xf32>, tensor<f32>) -> (tensor<16x512xf32>)
+%2230 = "stablehlo.multiply"(%1615, %2191) : (tensor<128x16x512xf32>, tensor<128x16x512xf32>) -> (tensor<128x16x512xf32>)
+%2231 = "stablehlo.reduce"(%2230, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x16x512xf32>, tensor<f32>) -> (tensor<16x512xf32>)
+%2232 = "stablehlo.subtract"(%2229, %2231) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2233 = "stablehlo.add"(%2226, %2232) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2234 = "stablehlo.multiply"(%2233, %2197) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2235 = "stablehlo.subtract"(%579, %2234) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2236 = "stablehlo.multiply"(%2201, %558) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2237 = "stablehlo.multiply"(%2203, %2233) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2238 = "stablehlo.add"(%2236, %2237) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2239 = "stablehlo.divide"(%2238, %2206) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2240 = "stablehlo.multiply"(%2200, %2239) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2241 = "stablehlo.multiply"(%2209, %538) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2242 = "stablehlo.multiply"(%2233, %2233) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2243 = "stablehlo.multiply"(%2211, %2242) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2244 = "stablehlo.add"(%2241, %2243) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2245 = "stablehlo.divide"(%2244, %2215) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2246 = "stablehlo.power"(%2245, %2217) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2247 = "stablehlo.add"(%2246, %2219) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2248 = "stablehlo.divide"(%2240, %2247) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2249 = "stablehlo.subtract"(%2235, %2248) : (tensor<16x512xf32>, tensor<16x512xf32>) -> (tensor<16x512xf32>)
+%2250 = "stablehlo.reduce"(%1689, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x512xf32>, tensor<f32>) -> (tensor<1x512xf32>)
+%2251 = "stablehlo.subtract"(%1821, %2250) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2252 = "stablehlo.add"(%2251, %2251) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2253 = "stablehlo.multiply"(%1494, %1837) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%2254 = "stablehlo.reduce"(%2253, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x512xf32>, tensor<f32>) -> (tensor<1x512xf32>)
+%2255 = "stablehlo.add"(%2254, %2254) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2256 = "stablehlo.subtract"(%1821, %2255) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2257 = "stablehlo.add"(%2252, %2256) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2258 = "stablehlo.multiply"(%2257, %1843) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2259 = "stablehlo.subtract"(%578, %2258) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2260 = "stablehlo.multiply"(%1847, %557) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2261 = "stablehlo.multiply"(%1849, %2257) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2262 = "stablehlo.add"(%2260, %2261) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2263 = "stablehlo.divide"(%2262, %1852) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2264 = "stablehlo.multiply"(%1846, %2263) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2265 = "stablehlo.multiply"(%1855, %537) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2266 = "stablehlo.multiply"(%2257, %2257) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2267 = "stablehlo.multiply"(%1857, %2266) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2268 = "stablehlo.add"(%2265, %2267) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2269 = "stablehlo.divide"(%2268, %1861) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2270 = "stablehlo.power"(%2269, %1863) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2271 = "stablehlo.add"(%2270, %1865) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2272 = "stablehlo.divide"(%2264, %2271) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2273 = "stablehlo.subtract"(%2259, %2272) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2274 = "stablehlo.multiply"(%1459, %1689) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%2275 = "stablehlo.reduce"(%2274, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x512xf32>, tensor<f32>) -> (tensor<1x512xf32>)
+%2276 = "stablehlo.subtract"(%1821, %2275) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2277 = "stablehlo.add"(%2276, %2276) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2278 = "stablehlo.divide"(%1837, %1627) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%2279 = "stablehlo.multiply"(%1550, %2278) : (tensor<128x1x512xf32>, tensor<128x1x512xf32>) -> (tensor<128x1x512xf32>)
+%2280 = "stablehlo.reduce"(%2279, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x512xf32>, tensor<f32>) -> (tensor<1x512xf32>)
+%2281 = "stablehlo.subtract"(%2280, %1890) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2282 = "stablehlo.add"(%2277, %2281) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2283 = "stablehlo.multiply"(%2282, %1843) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2284 = "stablehlo.subtract"(%577, %2283) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2285 = "stablehlo.multiply"(%1847, %556) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2286 = "stablehlo.multiply"(%1849, %2282) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2287 = "stablehlo.add"(%2285, %2286) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2288 = "stablehlo.divide"(%2287, %1852) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2289 = "stablehlo.multiply"(%1846, %2288) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2290 = "stablehlo.multiply"(%1855, %536) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2291 = "stablehlo.multiply"(%2282, %2282) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2292 = "stablehlo.multiply"(%1857, %2291) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2293 = "stablehlo.add"(%2290, %2292) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2294 = "stablehlo.divide"(%2293, %1861) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2295 = "stablehlo.power"(%2294, %1863) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2296 = "stablehlo.add"(%2295, %1865) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2297 = "stablehlo.divide"(%2289, %2296) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2298 = "stablehlo.subtract"(%2284, %2297) : (tensor<1x512xf32>, tensor<1x512xf32>) -> (tensor<1x512xf32>)
+%2299 = "stablehlo.constant"() {
+value = dense<0.000000e+00> : tensor<512x784xf32>
+} : () -> (tensor<512x784xf32>)
+%2300 = "stablehlo.dot_general"(%1499, %1685) {
+dot_dimension_numbers = #stablehlo.dot<
+lhs_batching_dimensions = [0],
+rhs_batching_dimensions = [0],
+lhs_contracting_dimensions = [1],
+rhs_contracting_dimensions = [1]
+>
+} : (tensor<128x1x512xf32>, tensor<128x1x784xf32>) -> (tensor<128x512x784xf32>)
+%2301 = "stablehlo.transpose"(%2300) {
+permutation = array<i64: 0,1,2>
+} : (tensor<128x512x784xf32>) -> (tensor<128x512x784xf32>)
+%2302 = "stablehlo.reduce"(%2301, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x512x784xf32>, tensor<f32>) -> (tensor<512x784xf32>)
+%2303 = "stablehlo.subtract"(%2299, %2302) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2304 = "stablehlo.add"(%2303, %2303) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2305 = "stablehlo.broadcast_in_dim"(%1673) {
+broadcast_dimensions = array<i64>
+} : (tensor<f32>) -> (tensor<784xf32>)
+%2306 = "stablehlo.transpose"(%2305) {
+permutation = array<i64: 0>
+} : (tensor<784xf32>) -> (tensor<784xf32>)
+%2307 = "stablehlo.divide"(%2306, %1649) : (tensor<784xf32>, tensor<784xf32>) -> (tensor<784xf32>)
+%2308 = "stablehlo.broadcast_in_dim"(%2307) {
+broadcast_dimensions = array<i64: 2>
+} : (tensor<784xf32>) -> (tensor<128x512x784xf32>)
+%2309 = "stablehlo.transpose"(%2308) {
+permutation = array<i64: 0,1,2>
+} : (tensor<128x512x784xf32>) -> (tensor<128x512x784xf32>)
+%2310 = "stablehlo.multiply"(%1638, %2309) : (tensor<128x512x784xf32>, tensor<128x512x784xf32>) -> (tensor<128x512x784xf32>)
+%2311 = "stablehlo.multiply"(%1500, %2310) : (tensor<128x512x784xf32>, tensor<128x512x784xf32>) -> (tensor<128x512x784xf32>)
+%2312 = "stablehlo.reduce"(%2311, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x512x784xf32>, tensor<f32>) -> (tensor<512x784xf32>)
+%2313 = "stablehlo.add"(%2312, %2312) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2314 = "stablehlo.subtract"(%2299, %2313) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2315 = "stablehlo.add"(%2304, %2314) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2316 = "stablehlo.constant"() {
+value = dense<1.000000e-06> : tensor<512x784xf32>
+} : () -> (tensor<512x784xf32>)
+%2317 = "stablehlo.multiply"(%2315, %2316) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2318 = "stablehlo.subtract"(%576, %2317) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2319 = "stablehlo.constant"() {
+value = dense<1.000000e-04> : tensor<512x784xf32>
+} : () -> (tensor<512x784xf32>)
+%2320 = "stablehlo.constant"() {
+value = dense<9.000000e-01> : tensor<512x784xf32>
+} : () -> (tensor<512x784xf32>)
+%2321 = "stablehlo.multiply"(%2320, %555) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2322 = "stablehlo.constant"() {
+value = dense<1.000000e-01> : tensor<512x784xf32>
+} : () -> (tensor<512x784xf32>)
+%2323 = "stablehlo.multiply"(%2322, %2315) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2324 = "stablehlo.add"(%2321, %2323) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2325 = "stablehlo.broadcast_in_dim"(%1760) {
+broadcast_dimensions = array<i64>
+} : (tensor<f32>) -> (tensor<512x784xf32>)
+%2326 = "stablehlo.divide"(%2324, %2325) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2327 = "stablehlo.multiply"(%2319, %2326) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2328 = "stablehlo.constant"() {
+value = dense<9.990000e-01> : tensor<512x784xf32>
+} : () -> (tensor<512x784xf32>)
+%2329 = "stablehlo.multiply"(%2328, %535) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2330 = "stablehlo.constant"() {
+value = dense<1.000000e-03> : tensor<512x784xf32>
+} : () -> (tensor<512x784xf32>)
+%2331 = "stablehlo.multiply"(%2315, %2315) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2332 = "stablehlo.multiply"(%2330, %2331) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2333 = "stablehlo.add"(%2329, %2332) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2334 = "stablehlo.broadcast_in_dim"(%1772) {
+broadcast_dimensions = array<i64>
+} : (tensor<f32>) -> (tensor<512x784xf32>)
+%2335 = "stablehlo.divide"(%2333, %2334) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2336 = "stablehlo.constant"() {
+value = dense<5.000000e-01> : tensor<512x784xf32>
+} : () -> (tensor<512x784xf32>)
+%2337 = "stablehlo.power"(%2335, %2336) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2338 = "stablehlo.constant"() {
+value = dense<1.000000e-08> : tensor<512x784xf32>
+} : () -> (tensor<512x784xf32>)
+%2339 = "stablehlo.add"(%2337, %2338) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2340 = "stablehlo.divide"(%2327, %2339) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2341 = "stablehlo.subtract"(%2318, %2340) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2342 = "stablehlo.multiply"(%1501, %2301) : (tensor<128x512x784xf32>, tensor<128x512x784xf32>) -> (tensor<128x512x784xf32>)
+%2343 = "stablehlo.reduce"(%2342, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x512x784xf32>, tensor<f32>) -> (tensor<512x784xf32>)
+%2344 = "stablehlo.subtract"(%2299, %2343) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2345 = "stablehlo.add"(%2344, %2344) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2346 = "stablehlo.divide"(%2310, %1641) : (tensor<128x512x784xf32>, tensor<128x512x784xf32>) -> (tensor<128x512x784xf32>)
+%2347 = "stablehlo.multiply"(%1640, %2346) : (tensor<128x512x784xf32>, tensor<128x512x784xf32>) -> (tensor<128x512x784xf32>)
+%2348 = "stablehlo.reduce"(%2347, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x512x784xf32>, tensor<f32>) -> (tensor<512x784xf32>)
+%2349 = "stablehlo.multiply"(%1640, %2310) : (tensor<128x512x784xf32>, tensor<128x512x784xf32>) -> (tensor<128x512x784xf32>)
+%2350 = "stablehlo.reduce"(%2349, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x512x784xf32>, tensor<f32>) -> (tensor<512x784xf32>)
+%2351 = "stablehlo.subtract"(%2348, %2350) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2352 = "stablehlo.add"(%2345, %2351) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2353 = "stablehlo.multiply"(%2352, %2316) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2354 = "stablehlo.subtract"(%575, %2353) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2355 = "stablehlo.multiply"(%2320, %554) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2356 = "stablehlo.multiply"(%2322, %2352) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2357 = "stablehlo.add"(%2355, %2356) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2358 = "stablehlo.divide"(%2357, %2325) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2359 = "stablehlo.multiply"(%2319, %2358) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2360 = "stablehlo.multiply"(%2328, %534) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2361 = "stablehlo.multiply"(%2352, %2352) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2362 = "stablehlo.multiply"(%2330, %2361) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2363 = "stablehlo.add"(%2360, %2362) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2364 = "stablehlo.divide"(%2363, %2334) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2365 = "stablehlo.power"(%2364, %2336) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2366 = "stablehlo.add"(%2365, %2338) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2367 = "stablehlo.divide"(%2359, %2366) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2368 = "stablehlo.subtract"(%2354, %2367) : (tensor<512x784xf32>, tensor<512x784xf32>) -> (tensor<512x784xf32>)
+%2369 = "stablehlo.constant"() {
+value = dense<0.000000e+00> : tensor<1x784xf32>
+} : () -> (tensor<1x784xf32>)
+%2370 = "stablehlo.reduce"(%1685, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x784xf32>, tensor<f32>) -> (tensor<1x784xf32>)
+%2371 = "stablehlo.subtract"(%2369, %2370) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2372 = "stablehlo.add"(%2371, %2371) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2373 = "stablehlo.divide"(%2306, %1662) : (tensor<784xf32>, tensor<784xf32>) -> (tensor<784xf32>)
+%2374 = "stablehlo.broadcast_in_dim"(%2373) {
+broadcast_dimensions = array<i64: 2>
+} : (tensor<784xf32>) -> (tensor<128x1x784xf32>)
+%2375 = "stablehlo.transpose"(%2374) {
+permutation = array<i64: 0,1,2>
+} : (tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%2376 = "stablehlo.multiply"(%1652, %2375) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%2377 = "stablehlo.multiply"(%1505, %2376) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%2378 = "stablehlo.reduce"(%2377, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x784xf32>, tensor<f32>) -> (tensor<1x784xf32>)
+%2379 = "stablehlo.add"(%2378, %2378) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2380 = "stablehlo.subtract"(%2369, %2379) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2381 = "stablehlo.add"(%2372, %2380) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2382 = "stablehlo.constant"() {
+value = dense<1.000000e-06> : tensor<1x784xf32>
+} : () -> (tensor<1x784xf32>)
+%2383 = "stablehlo.multiply"(%2381, %2382) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2384 = "stablehlo.subtract"(%574, %2383) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2385 = "stablehlo.constant"() {
+value = dense<1.000000e-04> : tensor<1x784xf32>
+} : () -> (tensor<1x784xf32>)
+%2386 = "stablehlo.constant"() {
+value = dense<9.000000e-01> : tensor<1x784xf32>
+} : () -> (tensor<1x784xf32>)
+%2387 = "stablehlo.multiply"(%2386, %553) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2388 = "stablehlo.constant"() {
+value = dense<1.000000e-01> : tensor<1x784xf32>
+} : () -> (tensor<1x784xf32>)
+%2389 = "stablehlo.multiply"(%2388, %2381) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2390 = "stablehlo.add"(%2387, %2389) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2391 = "stablehlo.broadcast_in_dim"(%1760) {
+broadcast_dimensions = array<i64>
+} : (tensor<f32>) -> (tensor<1x784xf32>)
+%2392 = "stablehlo.divide"(%2390, %2391) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2393 = "stablehlo.multiply"(%2385, %2392) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2394 = "stablehlo.constant"() {
+value = dense<9.990000e-01> : tensor<1x784xf32>
+} : () -> (tensor<1x784xf32>)
+%2395 = "stablehlo.multiply"(%2394, %533) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2396 = "stablehlo.constant"() {
+value = dense<1.000000e-03> : tensor<1x784xf32>
+} : () -> (tensor<1x784xf32>)
+%2397 = "stablehlo.multiply"(%2381, %2381) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2398 = "stablehlo.multiply"(%2396, %2397) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2399 = "stablehlo.add"(%2395, %2398) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2400 = "stablehlo.broadcast_in_dim"(%1772) {
+broadcast_dimensions = array<i64>
+} : (tensor<f32>) -> (tensor<1x784xf32>)
+%2401 = "stablehlo.divide"(%2399, %2400) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2402 = "stablehlo.constant"() {
+value = dense<5.000000e-01> : tensor<1x784xf32>
+} : () -> (tensor<1x784xf32>)
+%2403 = "stablehlo.power"(%2401, %2402) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2404 = "stablehlo.constant"() {
+value = dense<1.000000e-08> : tensor<1x784xf32>
+} : () -> (tensor<1x784xf32>)
+%2405 = "stablehlo.add"(%2403, %2404) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2406 = "stablehlo.divide"(%2393, %2405) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2407 = "stablehlo.subtract"(%2384, %2406) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2408 = "stablehlo.multiply"(%1506, %1685) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%2409 = "stablehlo.reduce"(%2408, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x784xf32>, tensor<f32>) -> (tensor<1x784xf32>)
+%2410 = "stablehlo.subtract"(%2369, %2409) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2411 = "stablehlo.add"(%2410, %2410) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2412 = "stablehlo.divide"(%2376, %1654) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%2413 = "stablehlo.multiply"(%1653, %2412) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%2414 = "stablehlo.reduce"(%2413, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x784xf32>, tensor<f32>) -> (tensor<1x784xf32>)
+%2415 = "stablehlo.multiply"(%1653, %2376) : (tensor<128x1x784xf32>, tensor<128x1x784xf32>) -> (tensor<128x1x784xf32>)
+%2416 = "stablehlo.reduce"(%2415, %1517)({^a(%x : tensor<f32>, %y : tensor<f32>):
+%z = "stablehlo.add"(%x, %y) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%z) : (tensor<f32>) -> ()
+}) {
+dimensions = array<i64: 0>
+} : (tensor<128x1x784xf32>, tensor<f32>) -> (tensor<1x784xf32>)
+%2417 = "stablehlo.subtract"(%2414, %2416) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2418 = "stablehlo.add"(%2411, %2417) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2419 = "stablehlo.multiply"(%2418, %2382) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2420 = "stablehlo.subtract"(%573, %2419) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2421 = "stablehlo.multiply"(%2386, %552) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2422 = "stablehlo.multiply"(%2388, %2418) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2423 = "stablehlo.add"(%2421, %2422) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2424 = "stablehlo.divide"(%2423, %2391) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2425 = "stablehlo.multiply"(%2385, %2424) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2426 = "stablehlo.multiply"(%2394, %532) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2427 = "stablehlo.multiply"(%2418, %2418) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2428 = "stablehlo.multiply"(%2396, %2427) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2429 = "stablehlo.add"(%2426, %2428) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2430 = "stablehlo.divide"(%2429, %2400) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2431 = "stablehlo.power"(%2430, %2402) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2432 = "stablehlo.add"(%2431, %2404) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2433 = "stablehlo.divide"(%2425, %2432) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2434 = "stablehlo.subtract"(%2420, %2433) : (tensor<1x784xf32>, tensor<1x784xf32>) -> (tensor<1x784xf32>)
+%2435 = "stablehlo.add"(%572, %1673) : (tensor<f32>, tensor<f32>) -> (tensor<f32>)
+"stablehlo.return"(%1667, %1780, %1820, %1868, %1908, %1955, %1987, %2026, %2057, %2091, %2122, %2150, %2181, %2222, %2249, %2273, %2298, %2341, %2368, %2407, %2434, %2435, %1757, %1809, %1851, %1897, %1938, %1976, %2009, %2046, %2080, %2111, %2139, %2170, %2205, %2238, %2262, %2287, %2324, %2357, %2390, %2423, %1769, %1815, %1860, %1903, %1947, %1982, %2018, %2052, %2086, %2117, %2145, %2176, %2214, %2244, %2268, %2293, %2333, %2363, %2399, %2429, %530) : (tensor<f32>, tensor<784x512xf32>, tensor<784x512xf32>, tensor<1x512xf32>, tensor<1x512xf32>, tensor<512x16xf32>, tensor<512x16xf32>, tensor<1x16xf32>, tensor<1x16xf32>, tensor<512x16xf32>, tensor<512x16xf32>, tensor<1x16xf32>, tensor<1x16xf32>, tensor<16x512xf32>, tensor<16x512xf32>, tensor<1x512xf32>, tensor<1x512xf32>, tensor<512x784xf32>, tensor<512x784xf32>, tensor<1x784xf32>, tensor<1x784xf32>, tensor<f32>, tensor<784x512xf32>, tensor<784x512xf32>, tensor<1x512xf32>, tensor<1x512xf32>, tensor<512x16xf32>, tensor<512x16xf32>, tensor<1x16xf32>, tensor<1x16xf32>, tensor<512x16xf32>, tensor<512x16xf32>, tensor<1x16xf32>, tensor<1x16xf32>, tensor<16x512xf32>, tensor<16x512xf32>, tensor<1x512xf32>, tensor<1x512xf32>, tensor<512x784xf32>, tensor<512x784xf32>, tensor<1x784xf32>, tensor<1x784xf32>, tensor<784x512xf32>, tensor<784x512xf32>, tensor<1x512xf32>, tensor<1x512xf32>, tensor<512x16xf32>, tensor<512x16xf32>, tensor<1x16xf32>, tensor<1x16xf32>, tensor<512x16xf32>, tensor<512x16xf32>, tensor<1x16xf32>, tensor<1x16xf32>, tensor<16x512xf32>, tensor<16x512xf32>, tensor<1x512xf32>, tensor<1x512xf32>, tensor<512x784xf32>, tensor<512x784xf32>, tensor<1x784xf32>, tensor<1x784xf32>, tensor<ui64>) -> ()
+}
