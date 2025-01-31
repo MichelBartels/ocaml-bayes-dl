@@ -81,7 +81,6 @@ module rec Var : sig
         * distribution
         -> ('a, 'b) u
     | DiffVar : id * ('a, 'b) u -> ('a, 'b) u
-    | DiffConst : ('a, 'b) u -> ('a, 'b) u
     | BroadcastInDim : ('a, 'b) u * int list -> ('a, 'b) u
     | Transpose : ('a, 'b) u * int list -> ('a, 'b) u
     | Tanh : ('a, 'b) u -> ('a, 'b) u
@@ -103,6 +102,8 @@ module rec Var : sig
     | Sin : ('a, 'b) u -> ('a, 'b) u
     | Cos : ('a, 'b) u -> ('a, 'b) u
     | Concatenate : ('a, 'b) u list * int -> ('a, 'b) u
+
+  type any = Any : ('a, 'b) u -> any
 
   module List : Hlist.S with type ('a, 'b) u = ('a, 'b) u
 
@@ -158,7 +159,6 @@ end = struct
         * distribution
         -> ('a, 'b) u
     | DiffVar : id * ('a, 'b) u -> ('a, 'b) u
-    | DiffConst : ('a, 'b) u -> ('a, 'b) u
     | BroadcastInDim : ('a, 'b) u * int list -> ('a, 'b) u
     | Transpose : ('a, 'b) u * int list -> ('a, 'b) u
     | Tanh : ('a, 'b) u -> ('a, 'b) u
@@ -185,6 +185,8 @@ end = struct
   Hlist.Make (struct
     type ('a, 'b) t = ('a, 'b) u
   end)
+
+  type any = Any : ('a, 'b) u -> any
 
   type 'a t = 'a VarList.t
 
@@ -353,8 +355,6 @@ end = struct
         value_type
     | DiffVar (_, v) ->
         of_var v
-    | DiffConst v ->
-        of_var v
     | BroadcastInDim (var, new_dims) ->
         let old_dims, element_type = of_var var in
         (new_dims @ old_dims, element_type)
@@ -442,10 +442,8 @@ module AnnotatedValueSet = Set.Make (struct
   let compare = Stdlib.compare
 end)
 
-type any_var = Any_var : ('a, 'b) Var.u -> any_var
-
 module VarMap = struct
-  type 'a t = (any_var * 'a) list
+  type 'a t = (Var.any * 'a) list
 
   let empty = []
 
@@ -467,10 +465,10 @@ let vars_to_ops vars =
       -> Stable_hlo.annotated_value list
          * (Stable_hlo.op option * Stable_hlo.annotated_value) VarMap.t =
    fun (prev_outputs, cache) var ->
-    if VarMap.mem (Any_var var) cache then
-      ((snd @@ VarMap.find (Any_var var) cache) :: prev_outputs, cache)
+    if VarMap.mem (Var.Any var) cache then
+      ((snd @@ VarMap.find (Var.Any var) cache) :: prev_outputs, cache)
     else
-      let add var = VarMap.add (Any_var var) in
+      let add var = VarMap.add (Var.Any var) in
       match var with
       | Add (lhs, rhs) ->
           let lhs, cache = aux ([], cache) lhs in
@@ -718,8 +716,6 @@ let vars_to_ops vars =
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | DiffVar (_, var) ->
-          aux (prev_outputs, cache) var
-      | DiffConst var ->
           aux (prev_outputs, cache) var
       | BroadcastInDim (var', new_dims) ->
           let var'', cache = aux ([], cache) var' in
