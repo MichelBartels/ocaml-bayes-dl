@@ -6,9 +6,9 @@ let () = Printexc.record_backtrace true
 let sigmoid x = 1. /.< (1. +.< exp (-1. *.< x))
 
 let reparametrize mean var shape =
-  (* let eps = Random.normal_f32 shape in *)
+  let eps = Random.normal_f32 shape in
   (* let eps = norm (zeros ([], F32)) (ones ([], F32)) shape in *)
-  let eps = zeros (shape, F32) in
+  (* let eps = zeros (shape, F32) in *)
   mean +@ (eps *@ var)
 
 let kl mean logvar var =
@@ -61,9 +61,10 @@ let vae (Ir.Var.List.E x) =
   let* [E x'; E decoder_loss] = decoder z in
   let kl = kl mean' logvar @@ exp logvar in
   let mse = mse x x' in
-  return @@ E (mse +@ kl +@ encoder_loss +@ decoder_loss)
+  let loss = mse +@ kl +@ encoder_loss +@ decoder_loss in
+  return @@ E loss
 
-let optim = Optim.adamw ?lr:(Some 0.0001)
+let optim = Optim.adamw ~lr:0.0001
 
 let train x = optim (vae x)
 
@@ -75,7 +76,7 @@ let decode Ir.Var.List.[] =
 
 module Device =
   ( val Pjrt_bindings.make
-          "/home/michel/part-ii-project/xla/bazel-bin/xla/pjrt/c/pjrt_c_api_gpu_plugin.so"
+          "/home/michel/part-ii-project/xla/bazel-bin/xla/pjrt/c/pjrt_c_api_cpu_plugin.so"
     )
 
 module Runtime = Runtime.Make (Device)

@@ -35,6 +35,7 @@ let topological_order : type a b. (a, b) Var.u -> Var.any list =
           let visited, order = loop visited order y in
           let var = Var.Any var in
           (visited, var :: order)
+      | Negate x
       | Abs x
       | Ln x
       | Exponential x
@@ -163,6 +164,7 @@ let diff : type a b c d.
   let inputs = wrap_inputs l inputs in
   let (E output) = f inputs in
   let order = topological_order output in
+  print_endline "hi" ;
   let backprop : type a b. (a, b) Ir.Var.u -> GradMap.t -> GradMap.t =
    fun var grads ->
     match GradMap.get grads var with
@@ -175,10 +177,12 @@ let diff : type a b c d.
           GradMap.add grads v2 grad
       | Subtract (v1, v2) ->
           let grads = GradMap.add grads v1 grad in
-          GradMap.add grads v2 (ones_like grad -@ grad)
+          GradMap.add grads v2 ~-@grad
       | Multiply (v1, v2) ->
           let grads = GradMap.add grads v1 (grad *@ v2) in
           GradMap.add grads v2 (grad *@ v1)
+      | Negate v ->
+          GradMap.add grads v ~-@grad
       | Abs _ ->
           failwith "abs not yet implemented"
       | Ln v ->
@@ -211,6 +215,7 @@ let diff : type a b c d.
           , rhs_contracting_dims
           , lhs_batching_dims
           , rhs_batching_dims ) ->
+          print_endline "dot product" ;
           let backprop_dot first var var_contracting_dims var_batching_dims
               const const_contracting_dims const_batching_dims =
             let var_shape = Ir.shape_of_var var in
@@ -287,7 +292,7 @@ let diff : type a b c d.
                lhs_contracting_dims lhs_batching_dims )
       | Divide (v1, v2) ->
           let grads = GradMap.add grads v1 (grad /@ v2) in
-          GradMap.add grads v2 (grad *@ (Dsl.zeros_like v1 -@ v1) /@ (v2 *@ v2))
+          GradMap.add grads v2 (grad *@ ~-@v1 /@ (v2 *@ v2))
       | BroadcastInDim (var, dims) -> (
         match Ir.ValueType.of_var var with
         | _, Ir.Tensor.F32 ->
@@ -340,7 +345,7 @@ let diff : type a b c d.
       | Sin var ->
           GradMap.add grads var (grad *@ cos var)
       | Cos var ->
-          GradMap.add grads var (grad *@ (Dsl.zeros_like var -@ sin var))
+          GradMap.add grads var (grad *@ ~-@(sin var))
       | Concatenate _ ->
           failwith "backpropagation of concatenate not implemented" )
   in
@@ -384,7 +389,6 @@ let diff : type a b c d.
     | _ ->
         failwith "should be impossible"
   in
-  let outputs = f inputs in
-  iter_vars l inputs outputs [outputs]
+  iter_vars l inputs (E output) [E output]
 
 let grad_and_value f = diff Var f

@@ -58,6 +58,7 @@ module rec Var : sig
     | Subtract : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Multiply : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Divide : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Negate : ('a, 'b) u -> ('a, 'b) u
     | Abs : ('a, 'b) u -> ('a, 'b) u
     | Ln : ('a, 'b) u -> ('a, 'b) u
     | Exponential : ('a, 'b) u -> ('a, 'b) u
@@ -136,6 +137,7 @@ end = struct
     | Subtract : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Multiply : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Divide : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Negate : ('a, 'b) u -> ('a, 'b) u
     | Abs : ('a, 'b) u -> ('a, 'b) u
     | Ln : ('a, 'b) u -> ('a, 'b) u
     | Exponential : ('a, 'b) u -> ('a, 'b) u
@@ -304,6 +306,8 @@ end = struct
     | Divide (lhs, _) ->
         of_var lhs
     | Abs var ->
+        of_var var
+    | Negate var ->
         of_var var
     | Ln var ->
         of_var var
@@ -521,6 +525,19 @@ let vars_to_ops vars =
               { inputs= lhs @ rhs
               ; outputs= [output]
               ; name= "stablehlo.divide"
+              ; attributes= []
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | Negate var' ->
+          let var', cache = aux ([], cache) var' in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= var'
+              ; outputs= [output]
+              ; name= "stablehlo.negate"
               ; attributes= []
               ; anonymous_functions= []
               ; call= false }

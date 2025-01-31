@@ -157,6 +157,8 @@ let ( |.< ) = u64_var_op ( |@ )
 
 let sqrt a = a **.> 0.5
 
+let ( ~-@ ) a = Var.Negate a
+
 let tanh a = Var.Tanh a
 
 let ones : type a b. (a, b) Ir.ValueType.u -> (a, b) Ir.Var.u = function
