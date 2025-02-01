@@ -22,17 +22,14 @@ let load_images t =
   let magic = String.get_int32_be str 0 in
   assert (magic = 2051l) ;
   let n = String.get_int32_be str 4 |> Int32.to_int in
-  let rec loop i =
-    if i = n then []
-    else
+  Dataset.make n (fun i ->
       let offset = 16 + (i * 784) in
       let img =
         List.init 784 (fun i ->
             float_of_int (String.get_uint8 str (offset + i)) /. 255. )
+        |> Ir.Tensor.of_list F32 [1; 784]
       in
-      img :: loop (i + 1)
-  in
-  ([1; 784], List.to_seq @@ loop 0)
+      img )
 
 let plot (img : (Ir.Tensor.f32, float) Ir.Tensor.t) =
   let open Graphics in
@@ -49,7 +46,7 @@ let plot (img : (Ir.Tensor.f32, float) Ir.Tensor.t) =
     for j = 0 to 27 do
       let x = i * scale in
       let y = j * scale in
-      let v = get img [0; 0; (y * 28) + x] in
+      let v = get img [0; 0; (j * 28) + i] in
       let colour = int_of_float (255. *. (1. -. v)) in
       set_color (rgb colour colour colour) ;
       fill_rect x y scale scale

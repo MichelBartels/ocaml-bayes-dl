@@ -13,8 +13,8 @@ type shape = int list
 
 module Tensor = Device_api.Tensor
 
-let tensor_element_type_to_stable_hlo :
-    type a b. (a, b) Tensor.kind -> Stable_hlo.tensor_element_type = function
+let tensor_element_type_to_stable_hlo : type a b.
+    (a, b) Tensor.kind -> Stable_hlo.tensor_element_type = function
   | F32 ->
       Stable_hlo.F32
   | I1 ->
@@ -58,6 +58,7 @@ module rec Var : sig
     | Subtract : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Multiply : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Divide : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Negate : ('a, 'b) u -> ('a, 'b) u
     | Abs : ('a, 'b) u -> ('a, 'b) u
     | Ln : ('a, 'b) u -> ('a, 'b) u
     | Exponential : ('a, 'b) u -> ('a, 'b) u
@@ -69,6 +70,7 @@ module rec Var : sig
     | Min : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Max : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Constant : ('a, 'b) Tensor.t -> ('a, 'b) u
+    | BroadcastScalarConstant : ('a, 'b) ValueType.u * 'b -> ('a, 'b) u
     | DotProduct :
         ('a, 'b) u * ('a, 'b) u * int list * int list * int list * int list
         -> ('a, 'b) u
@@ -80,7 +82,6 @@ module rec Var : sig
         * distribution
         -> ('a, 'b) u
     | DiffVar : id * ('a, 'b) u -> ('a, 'b) u
-    | DiffConst : ('a, 'b) u -> ('a, 'b) u
     | BroadcastInDim : ('a, 'b) u * int list -> ('a, 'b) u
     | Transpose : ('a, 'b) u * int list -> ('a, 'b) u
     | Tanh : ('a, 'b) u -> ('a, 'b) u
@@ -102,6 +103,8 @@ module rec Var : sig
     | Sin : ('a, 'b) u -> ('a, 'b) u
     | Cos : ('a, 'b) u -> ('a, 'b) u
     | Concatenate : ('a, 'b) u list * int -> ('a, 'b) u
+
+  type any = Any : ('a, 'b) u -> any
 
   module List : Hlist.S with type ('a, 'b) u = ('a, 'b) u
 
@@ -134,6 +137,7 @@ end = struct
     | Subtract : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Multiply : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Divide : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Negate : ('a, 'b) u -> ('a, 'b) u
     | Abs : ('a, 'b) u -> ('a, 'b) u
     | Ln : ('a, 'b) u -> ('a, 'b) u
     | Exponential : ('a, 'b) u -> ('a, 'b) u
@@ -145,6 +149,7 @@ end = struct
     | Min : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Max : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Constant : ('a, 'b) Tensor.t -> ('a, 'b) u
+    | BroadcastScalarConstant : ('a, 'b) ValueType.u * 'b -> ('a, 'b) u
     | DotProduct :
         ('a, 'b) u * ('a, 'b) u * int list * int list * int list * int list
         -> ('a, 'b) u
@@ -156,7 +161,6 @@ end = struct
         * distribution
         -> ('a, 'b) u
     | DiffVar : id * ('a, 'b) u -> ('a, 'b) u
-    | DiffConst : ('a, 'b) u -> ('a, 'b) u
     | BroadcastInDim : ('a, 'b) u * int list -> ('a, 'b) u
     | Transpose : ('a, 'b) u * int list -> ('a, 'b) u
     | Tanh : ('a, 'b) u -> ('a, 'b) u
@@ -183,6 +187,8 @@ end = struct
   Hlist.Make (struct
     type ('a, 'b) t = ('a, 'b) u
   end)
+
+  type any = Any : ('a, 'b) u -> any
 
   type 'a t = 'a VarList.t
 
@@ -301,6 +307,8 @@ end = struct
         of_var lhs
     | Abs var ->
         of_var var
+    | Negate var ->
+        of_var var
     | Ln var ->
         of_var var
     | Exponential var ->
@@ -318,6 +326,8 @@ end = struct
         of_var lhs
     | Constant t ->
         of_tensor t
+    | BroadcastScalarConstant (value_type, _) ->
+        value_type
     | DotProduct
         ( lhs
         , rhs
@@ -334,24 +344,20 @@ end = struct
           List.filteri
             (fun i _ ->
               not
-                (List.mem i lhs_batching_dims || List.mem i lhs_contracting_dims)
-              )
+                (List.mem i lhs_batching_dims || List.mem i lhs_contracting_dims) )
             lhs_shape
         in
         let rhs_remaining_dims =
           List.filteri
             (fun i _ ->
               not
-                (List.mem i rhs_batching_dims || List.mem i rhs_contracting_dims)
-              )
+                (List.mem i rhs_batching_dims || List.mem i rhs_contracting_dims) )
             rhs_shape
         in
         (batching_dims @ lhs_remaining_dims @ rhs_remaining_dims, element_type)
     | Random (value_type, _, _, _, _) ->
         value_type
     | DiffVar (_, v) ->
-        of_var v
-    | DiffConst v ->
         of_var v
     | BroadcastInDim (var, new_dims) ->
         let old_dims, element_type = of_var var in
@@ -440,10 +446,8 @@ module AnnotatedValueSet = Set.Make (struct
   let compare = Stdlib.compare
 end)
 
-type any_var = Any_var : ('a, 'b) Var.u -> any_var
-
 module VarMap = struct
-  type 'a t = (any_var * 'a) list
+  type 'a t = (Var.any * 'a) list
 
   let empty = []
 
@@ -458,18 +462,17 @@ module VarMap = struct
 end
 
 let vars_to_ops vars =
-  let rec aux :
-      type a b.
+  let rec aux : type a b.
          Stable_hlo.annotated_value list
          * (Stable_hlo.op option * Stable_hlo.annotated_value) VarMap.t
       -> (a, b) Var.u
       -> Stable_hlo.annotated_value list
          * (Stable_hlo.op option * Stable_hlo.annotated_value) VarMap.t =
    fun (prev_outputs, cache) var ->
-    if VarMap.mem (Any_var var) cache then
-      ((snd @@ VarMap.find (Any_var var) cache) :: prev_outputs, cache)
+    if VarMap.mem (Var.Any var) cache then
+      ((snd @@ VarMap.find (Var.Any var) cache) :: prev_outputs, cache)
     else
-      let add var = VarMap.add (Any_var var) in
+      let add var = VarMap.add (Var.Any var) in
       match var with
       | Add (lhs, rhs) ->
           let lhs, cache = aux ([], cache) lhs in
@@ -522,6 +525,19 @@ let vars_to_ops vars =
               { inputs= lhs @ rhs
               ; outputs= [output]
               ; name= "stablehlo.divide"
+              ; attributes= []
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | Negate var' ->
+          let var', cache = aux ([], cache) var' in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= var'
+              ; outputs= [output]
+              ; name= "stablehlo.negate"
               ; attributes= []
               ; anonymous_functions= []
               ; call= false }
@@ -642,6 +658,24 @@ let vars_to_ops vars =
               ; call= false }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
+      | BroadcastScalarConstant (value_type, scalar) ->
+          let output = Var.to_annotated_value var in
+          let repr = Tensor.value_to_string (snd value_type) scalar in
+          let signature =
+            Stable_hlo.value_type_to_string @@ ValueType.tensor_to_stable_hlo
+            @@ value_type
+          in
+          let repr = Printf.sprintf "dense<%s> : %s" repr signature in
+          let op =
+            Stable_hlo.
+              { inputs= []
+              ; outputs= [output]
+              ; name= "stablehlo.constant"
+              ; attributes= [("value", repr)]
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
       | DotProduct
           ( lhs
           , rhs
@@ -699,8 +733,6 @@ let vars_to_ops vars =
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | DiffVar (_, var) ->
-          aux (prev_outputs, cache) var
-      | DiffConst var ->
           aux (prev_outputs, cache) var
       | BroadcastInDim (var', new_dims) ->
           let var'', cache = aux ([], cache) var' in
@@ -765,7 +797,7 @@ let vars_to_ops vars =
       | Sum (var', dimensions) ->
           let var', cache = aux ([], cache) var' in
           let initial, cache =
-            aux ([], cache) (Constant (Tensor.scalar_f32 0.0))
+            aux ([], cache) (Var.BroadcastScalarConstant (([], F32), 0.0))
           in
           let output = Var.to_annotated_value var in
           let op =
@@ -959,8 +991,8 @@ let annotated_values_to_return_op values =
     ; anonymous_functions= []
     ; call= false }
 
-let create_func :
-    type a b. a ValueType.t -> (a Var.t -> b Var.t) -> (a, b) Func.t =
+let create_func : type a b.
+    a ValueType.t -> (a Var.t -> b Var.t) -> (a, b) Func.t =
  fun inputs body ->
   let open Hlist.Map (ValueType.List) (Var.List) in
   let args = ValueType.to_arg inputs in

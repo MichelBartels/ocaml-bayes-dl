@@ -3,12 +3,12 @@ open Dsl
 
 let () = Printexc.record_backtrace true
 
-let sigmoid x = (tanh (x /.> 2.0) +.> 1.0) /.> 2.0
+let sigmoid x = 1. /.< (1. +.< exp (-1. *.< x))
 
 let reparametrize mean var shape =
-  (* let eps = Random.normal_f32 shape in *)
-  let eps = norm (zeros ([], F32)) (ones ([], F32)) shape in
-  (* let eps = zeros (Tensor_type (shape, F32)) in *)
+  let eps = Random.normal_f32 shape in
+  (* let eps = norm (zeros ([], F32)) (ones ([], F32)) shape in *)
+  (* let eps = zeros (shape, F32) in *)
   mean +@ (eps *@ var)
 
 let kl mean logvar var =
@@ -61,9 +61,10 @@ let vae (Ir.Var.List.E x) =
   let* [E x'; E decoder_loss] = decoder z in
   let kl = kl mean' logvar @@ exp logvar in
   let mse = mse x x' in
-  return @@ E (mse +@ kl +@ encoder_loss +@ decoder_loss)
+  let loss = mse +@ kl +@ encoder_loss +@ decoder_loss in
+  return @@ E loss
 
-let optim = Optim.adamw ?lr:(Some 0.0001)
+let optim = Optim.adamw ~lr:0.0001
 
 let train x = optim (vae x)
 
@@ -75,7 +76,7 @@ let decode Ir.Var.List.[] =
 
 module Device =
   ( val Pjrt_bindings.make
-          "/home/michel/part-ii-project/xla/bazel-bin/xla/pjrt/c/pjrt_c_api_gpu_plugin.so"
+          "/home/michel/part-ii-project/xla/bazel-bin/xla/pjrt/c/pjrt_c_api_cpu_plugin.so"
     )
 
 module Runtime = Runtime.Make (Device)
@@ -95,7 +96,7 @@ let decode =
   compile param_type @@ fun params -> Parameters.to_fun (decode []) params
 
 let train_step set_msg params x =
-  let x = DeviceValue.of_host_value x in
+  (* let x = DeviceValue.of_host_value @@ E x in *)
   let [loss; params] = train_step [params; x] in
   let (E loss) = DeviceValue.to_host_value loss in
   set_msg @@ Printf.sprintf "Loss: %3.2f" @@ List.hd @@ Ir.Tensor.to_list loss ;
@@ -115,7 +116,12 @@ let train () =
     Parameters.initial (E input_type) train |> DeviceValue.of_host_value
   in
   let dataset = Mnist.load_images Train in
-  let generator = Dataset.fixed_iterations num_steps batch_size dataset in
+  let dataset = Dataset.batch_tensors batch_size dataset in
+  let dataset = Dataset.repeat ~total:num_steps dataset in
+  let dataset =
+    Dataset.map (fun x -> DeviceValue.of_host_value @@ E x) dataset
+  in
+  let generator = Dataset.to_seq ~num_workers:4 dataset in
   let generator, set_msg = Dataset.progress num_steps generator in
   let train_step = train_step set_msg in
   let rec loop i params generator =

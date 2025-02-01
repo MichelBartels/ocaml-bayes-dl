@@ -1,37 +1,95 @@
-let shuffle seq () =
-  let list = List.of_seq seq in
-  let tagged = List.map (fun x -> (Stdlib.Random.bits (), x)) list in
-  let sorted = List.sort (fun (x, _) (y, _) -> compare x y) tagged in
-  let shuffled_list = List.map snd sorted in
-  List.to_seq shuffled_list ()
+type 'a t = {get: int -> 'a; length: int}
 
-let batch n (shape, seq) =
-  let rec take n = function
-    | xs when n = 0 ->
-        Some ([], fun () -> xs)
-    | Seq.Cons (x, xs) ->
-        Option.bind (take (n - 1) (xs ())) (fun (xs, ys) -> Some (x @ xs, ys))
-    | _ ->
-        None
+let make length get = {get; length}
+
+let shuffle t =
+  let perm = Array.init t.length (fun i -> (Stdlib.Random.bits (), i)) in
+  Array.sort (fun (x, _) (y, _) -> compare x y) perm ;
+  {get= (fun i -> t.get (snd perm.(i))); length= t.length}
+
+let batch f n t =
+  let m = t.length / n in
+  { get=
+      (fun i ->
+        let batch = List.init n (fun j -> t.get @@ ((n * i) + j)) in
+        f batch )
+  ; length= m }
+
+let batch_tensors n = batch Ir.Tensor.concatenate n
+
+let map f t = {get= (fun i -> f (t.get i)); length= t.length}
+
+let repeat t ~total =
+  { get=
+      (fun i ->
+        let i = i mod t.length in
+        t.get i )
+  ; length= total }
+
+let to_seq ?(num_workers = 1) ?(max_fetched = 16) t =
+  let open Domainslib.Chan in
+  let in' = make_unbounded () in
+  let out = make_bounded max_fetched in
+  let workers =
+    List.init num_workers (fun _ ->
+        Domain.spawn (fun () ->
+            let rec loop () =
+              match recv in' with
+              | `Done ->
+                  ()
+              | `Work i ->
+                  send out @@ t.get i ;
+                  loop ()
+            in
+            loop () ) )
   in
-  let rec inner n seq () =
-    match take n @@ seq () with
-    | Some (batch, rest) ->
-        Seq.Cons (batch, inner n rest)
-    | None ->
-        Seq.Nil
-  in
-  (n :: shape, inner n seq)
+  for i = 0 to t.length - 1 do
+    send in' (`Work i)
+  done ;
+  Seq.init t.length
+  @@ fun i ->
+  let item = recv out in
+  if i + 1 = t.length then (
+    for _ = 0 to t.length - 1 do
+      send in' `Done
+    done ;
+    List.iter (fun worker -> Domain.join worker) workers ) ;
+  item
 
-let to_elements (shape, l) =
-  Seq.map (fun l -> Runtime.HostValue.E (Ir.Tensor.of_list F32 shape l)) l
+(* let shuffle seq () = *)
+(*   let list = List.of_seq seq in *)
+(*   let tagged = List.map (fun x -> (Stdlib.Random.bits (), x)) list in *)
+(*   let sorted = List.sort (fun (x, _) (y, _) -> compare x y) tagged in *)
+(*   let shuffled_list = List.map snd sorted in *)
+(*   List.to_seq shuffled_list () *)
 
-let epoch batch_size (shape, l) =
-  let l = shuffle l in
-  to_elements (batch batch_size (shape, l))
+(* let batch n (shape, seq) = *)
+(*   let rec take n = function *)
+(*     | xs when n = 0 -> *)
+(*         Some ([], fun () -> xs) *)
+(*     | Seq.Cons (x, xs) -> *)
+(*         Option.bind (take (n - 1) (xs ())) (fun (xs, ys) -> Some (x @ xs, ys)) *)
+(*     | _ -> *)
+(*         None *)
+(*   in *)
+(*   let rec inner n seq () = *)
+(*     match take n @@ seq () with *)
+(*     | Some (batch, rest) -> *)
+(*         Seq.Cons (batch, inner n rest) *)
+(*     | None -> *)
+(*         Seq.Nil *)
+(*   in *)
+(*   (n :: shape, inner n seq) *)
 
-let fixed_iterations n batch_size dataset =
-  Seq.take n @@ Seq.cycle @@ epoch batch_size dataset
+(* let to_elements (shape, l) = *)
+(*   Seq.map (fun l -> Runtime.HostValue.E (Ir.Tensor.of_list F32 shape l)) l *)
+
+(* let epoch batch_size (shape, l) = *)
+(*   let l = shuffle l in *)
+(*   to_elements (batch batch_size (shape, l)) *)
+
+(* let fixed_iterations n batch_size dataset = *)
+(*   Seq.take n @@ Seq.cycle @@ epoch batch_size dataset *)
 
 let progress total seq =
   let open Progress in
