@@ -68,11 +68,11 @@ let optim = Optim.adamw ~lr:0.0001
 
 let train x = optim (vae x)
 
-let decode Ir.Var.List.[] =
-  let open Parameters in
-  let x = norm (zeros ([], F32)) (ones ([], F32)) [1; 1; embedding_dim] in
-  let* [y; _] = decoder x in
-  return y
+(* let decode Ir.Var.List.[] = *)
+(*   let open Parameters in *)
+(*   let x = norm (zeros ([], F32)) (ones ([], F32)) [1; 1; embedding_dim] in *)
+(*   let* [y; _] = decoder x in *)
+(*   return y *)
 
 module Device =
   ( val Pjrt_bindings.make
@@ -91,25 +91,30 @@ let train_step =
   compile [param_type; E input_type]
   @@ fun [params; x] -> Parameters.to_fun (train x) params
 
-let decode =
-  let param_type = Parameters.param_type [] decode in
-  compile param_type @@ fun params -> Parameters.to_fun (decode []) params
+(* let decode = *)
+(*   let param_type = Parameters.param_type [] decode in *)
+(*   compile param_type @@ fun params -> Parameters.to_fun (decode []) params *)
 
 let train_step set_msg params x =
   (* let x = DeviceValue.of_host_value @@ E x in *)
+  let start_time = Core.Time_ns.now () in
   let [loss; params] = train_step [params; x] in
+  let end_time = Core.Time_ns.now () in
+  let elapsed = Core.Time_ns.diff end_time start_time in
+  let elapsed = Core.Time_ns.Span.to_ns elapsed in
+  let elapsed = Base.Float.to_float elapsed in
   let (E loss) = DeviceValue.to_host_value loss in
   set_msg @@ Printf.sprintf "Loss: %3.2f" @@ List.hd @@ Ir.Tensor.to_list loss ;
-  params
+  (elapsed, params)
 
-let num_steps = 25000
+let num_steps = 110
 
-let show_sample params () =
-  let Runtime.DeviceValue.(inference_params :: _) = params in
-  let Runtime.DeviceValue.[_; decoder_params] = inference_params in
-  let y = decode ~collect:false [decoder_params] in
-  let (E y) = DeviceValue.to_host_value y in
-  Mnist.plot y
+(* let show_sample params () = *)
+(*   let Runtime.DeviceValue.(inference_params :: _) = params in *)
+(*   let Runtime.DeviceValue.[_; decoder_params] = inference_params in *)
+(*   let y = decode ~collect:false [decoder_params] in *)
+(*   let (E y) = DeviceValue.to_host_value y in *)
+(*   Mnist.plot y *)
 
 let train () =
   let params =
@@ -127,14 +132,15 @@ let train () =
   let rec loop i params generator =
     match Seq.uncons generator with
     | None ->
-        params
+        []
     | Some (batch, generator) ->
-        loop (i + 1) (train_step params batch) generator
+        let elapsed, params = train_step params batch in
+        elapsed :: loop (i + 1) params generator
   in
   loop 1 params generator
 
-let _ =
-  let params = train () in
-  while true do
-    show_sample params ()
-  done
+let () =
+  let times = train () in
+  print_endline @@ "["
+  ^ String.concat "; " (List.map string_of_float times)
+  ^ "]"
