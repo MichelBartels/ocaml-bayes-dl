@@ -235,6 +235,8 @@ let transpose var permutation =
 
 let scalar_f32 x = full F32 x []
 
+let ( ~. ) = scalar_f32
+
 let scalar_u64 str = full U64 (Unsigned.UInt64.of_string str) []
 
 let assert_float_fn

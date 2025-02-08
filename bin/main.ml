@@ -22,43 +22,44 @@ let bayesian_parameter batch_size shape =
   let* (E var) = new_param (E (Ir.Tensor.full F32 shape 0.001)) in
   let mean = Ir.Var.BroadcastInDim (mean, [batch_size]) in
   let var = Ir.Var.BroadcastInDim (var, [batch_size]) in
-  let loss = kl mean (ln (var *.> 1000.)) (var *.> 1000.) in
-  return @@ [E (reparametrize mean var (batch_size :: shape)); E loss]
+  return
+  @@ E
+       (Svi.sample
+          ~prior:(Normal (zeros_like mean, ones_like mean *.> 0.001))
+          ~guide:(Normal (mean, var)) )
 
 let dense ?(activation = sigmoid) in_dims out_dims x =
   let open Parameters in
   let shape = Ir.shape_of_var x in
   let batch_size = List.hd shape in
-  let* [E w; E w_loss] = bayesian_parameter batch_size [in_dims; out_dims] in
-  let* [E b; E b_loss] = bayesian_parameter batch_size [1; out_dims] in
-  return @@ [E (activation (matmul x w +@ b)); E (w_loss +@ b_loss)]
+  let* (E w) = bayesian_parameter batch_size [in_dims; out_dims] in
+  let* (E b) = bayesian_parameter batch_size [1; out_dims] in
+  return @@ E (activation (matmul x w +@ b))
 
 let embedding_dim = 16
 
 let encoder x =
   let open Parameters in
-  let* [E z; E z_loss] = dense ~activation:tanh 784 512 x in
-  let* [E mean; E mean_loss] = dense ~activation:Fun.id 512 embedding_dim z in
-  let* [E logvar; E logvar_loss] =
-    dense ~activation:Fun.id 512 embedding_dim z
-  in
-  return [E mean; E logvar; E (z_loss +@ mean_loss +@ logvar_loss)]
+  let* (E z) = dense ~activation:tanh 784 512 x in
+  let* (E mean) = dense ~activation:Fun.id 512 embedding_dim z in
+  let* (E logvar) = dense ~activation:Fun.id 512 embedding_dim z in
+  return [E mean; E logvar]
 
 let decoder z =
   let open Parameters in
-  let* [E z; E z_loss] = dense ~activation:tanh embedding_dim 512 z in
-  let* [E z; E z'_loss] = dense 512 784 z in
-  return [E z; E (z_loss +@ z'_loss)]
+  let* (E z) = dense ~activation:tanh embedding_dim 512 z in
+  let* (E z) = dense 512 784 z in
+  return @@ E z
 
 let mse x x' = sum [0; 1] @@ mean [0] ((x -@ x') *@ (x -@ x'))
 
 let vae (Ir.Var.List.E x) =
   let open Parameters in
-  let* [E mean'; E logvar; E encoder_loss] = encoder x in
+  let* [E mean'; E logvar] = encoder x in
   let shape = Ir.shape_of_var x in
   let batch_size = List.hd shape in
   let z = reparametrize mean' (exp logvar) [batch_size; 1; embedding_dim] in
-  let* [E x'; E decoder_loss] = decoder z in
+  let* (E x') = decoder z in
   let kl = kl mean' logvar @@ exp logvar in
   let mse = mse x x' in
   let loss = mse +@ kl +@ encoder_loss +@ decoder_loss in
