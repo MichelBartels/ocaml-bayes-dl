@@ -164,7 +164,6 @@ let diff : type a b c d.
   let inputs = wrap_inputs l inputs in
   let (E output) = f inputs in
   let order = topological_order output in
-  print_endline "hi" ;
   let backprop : type a b. (a, b) Ir.Var.u -> GradMap.t -> GradMap.t =
    fun var grads ->
     match GradMap.get grads var with
@@ -215,7 +214,6 @@ let diff : type a b c d.
           , rhs_contracting_dims
           , lhs_batching_dims
           , rhs_batching_dims ) ->
-          print_endline "dot product" ;
           let backprop_dot first var var_contracting_dims var_batching_dims
               const const_contracting_dims const_batching_dims =
             let var_shape = Ir.shape_of_var var in

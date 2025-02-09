@@ -22,12 +22,9 @@ let random_u64_to_f32 x =
 
 let key = scalar_u64 "0xc8e4fd154ce32f6d"
 
-type _ Effect.t +=
-  | Counter : int -> (Ir.Tensor.u64, Unsigned.uint64) Ir.Var.u Effect.t
-
 let uniform_f32 ?(key = key) shape =
   let total_size = List.fold_left ( * ) 1 shape in
-  let ctr = Effect.perform (Counter total_size) in
+  let ctr = Effect.perform (Effects.Counter total_size) in
   let flat_shape = [total_size] in
   let ctrs = iota 0 flat_shape in
   let ctr = broadcast_scalar ctr flat_shape in
@@ -50,7 +47,7 @@ let normal_f32 ?(key = key) shape =
   let z_1 = factor *@ cos inner in
   concat 0 [z_0; z_1] |> reshape shape |> no_grad
 
-let current_seed () = Effect.perform (Counter 0)
+let current_seed () = Effect.perform (Effects.Counter 0)
 
 let handler f (ctr : (Ir.Tensor.u64, Unsigned.uint64) Ir.Var.u) =
   let open Effect.Deep in
@@ -59,7 +56,7 @@ let handler f (ctr : (Ir.Tensor.u64, Unsigned.uint64) Ir.Var.u) =
     { effc=
         (fun (type a) (eff : a Effect.t) ->
           match eff with
-          | Counter incr ->
+          | Effects.Counter incr ->
               Some
                 (fun (k : (a, _) continuation) ->
                   let ctr = !ctr_ref in
@@ -67,8 +64,6 @@ let handler f (ctr : (Ir.Tensor.u64, Unsigned.uint64) Ir.Var.u) =
                   continue k ctr )
           | _ ->
               None ) }
-
-let dummy_handler f = handler f (scalar_u64 "0")
 
 let seed_type = ([], Ir.Tensor.U64)
 

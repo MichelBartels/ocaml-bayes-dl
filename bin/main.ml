@@ -5,75 +5,61 @@ let () = Printexc.record_backtrace true
 
 let sigmoid x = 1. /.< (1. +.< exp (-1. *.< x))
 
-let reparametrize mean var shape =
-  let eps = Random.normal_f32 shape in
-  (* let eps = norm (zeros ([], F32)) (ones ([], F32)) shape in *)
-  (* let eps = zeros (shape, F32) in *)
-  mean +@ (eps *@ var)
-
-let kl mean logvar var =
-  sum [0]
-  @@ Dsl.mean [0; 1]
-  @@ (-0.5 *.< (1.0 +.< logvar -@ (mean *@ mean) -@ var))
-
 let bayesian_parameter batch_size shape =
   let open Parameters in
   let* (E mean) = new_param (Runtime.HostValue.zeros (E (shape, F32))) in
-  let* (E var) = new_param (E (Ir.Tensor.full F32 shape 0.001)) in
+  let* (E var) = new_param (E (Ir.Tensor.full F32 shape @@ Float.log 0.001)) in
   let mean = Ir.Var.BroadcastInDim (mean, [batch_size]) in
-  let var = Ir.Var.BroadcastInDim (var, [batch_size]) in
+  let var = Ir.Var.BroadcastInDim (exp var, [batch_size]) in
+  (* return @@ mean *)
   return
-  @@ E
-       (Svi.sample
-          ~prior:(Normal (zeros_like mean, ones_like mean *.> 0.001))
-          ~guide:(Normal (mean, var)) )
+  @@ Svi.sample
+       ~prior:(Normal (zeros_like mean, ones_like mean *.> 0.001))
+       ~guide:(Normal (mean, var))
 
 let dense ?(activation = sigmoid) in_dims out_dims x =
   let open Parameters in
   let shape = Ir.shape_of_var x in
   let batch_size = List.hd shape in
-  let* (E w) = bayesian_parameter batch_size [in_dims; out_dims] in
-  let* (E b) = bayesian_parameter batch_size [1; out_dims] in
-  return @@ E (activation (matmul x w +@ b))
+  let* w = bayesian_parameter batch_size [in_dims; out_dims] in
+  let* b = bayesian_parameter batch_size [1; out_dims] in
+  return @@ activation (matmul x w +@ b)
 
 let embedding_dim = 16
 
 let encoder x =
   let open Parameters in
-  let* (E z) = dense ~activation:tanh 784 512 x in
-  let* (E mean) = dense ~activation:Fun.id 512 embedding_dim z in
-  let* (E logvar) = dense ~activation:Fun.id 512 embedding_dim z in
-  return [E mean; E logvar]
+  let* z = dense ~activation:tanh 784 512 x in
+  let* mean = dense ~activation:Fun.id 512 embedding_dim z in
+  let* logvar = dense ~activation:Fun.id 512 embedding_dim z in
+  return (mean, logvar)
 
 let decoder z =
   let open Parameters in
-  let* (E z) = dense ~activation:tanh embedding_dim 512 z in
-  let* (E z) = dense 512 784 z in
-  return @@ E z
+  let* z = dense ~activation:tanh embedding_dim 512 z in
+  let* z = dense 512 784 z in
+  return z
 
-let mse x x' = sum [0; 1] @@ mean [0] ((x -@ x') *@ (x -@ x'))
-
-let vae (Ir.Var.List.E x) =
+let vae x =
   let open Parameters in
-  let* [E mean'; E logvar] = encoder x in
-  let shape = Ir.shape_of_var x in
-  let batch_size = List.hd shape in
-  let z = reparametrize mean' (exp logvar) [batch_size; 1; embedding_dim] in
-  let* (E x') = decoder z in
-  let kl = kl mean' logvar @@ exp logvar in
-  let mse = mse x x' in
-  let loss = mse +@ kl +@ encoder_loss +@ decoder_loss in
-  return @@ E loss
+  let* mean', logvar = encoder x in
+  let z =
+    Svi.sample
+      ~prior:(Normal (zeros_like mean', ones_like mean'))
+      ~guide:(Normal (mean', exp logvar))
+  in
+  let* x' = decoder z in
+  return @@ Distribution.Normal (x', ones_like x')
 
-let optim = Optim.adamw ~lr:0.0001
+let optim = Optim.adamw ~lr:0.000001
 
-let train x = optim (vae x)
+let train (Ir.Var.List.E x) = optim @@ Svi.elbo x @@ vae x
 
 let decode Ir.Var.List.[] =
   let open Parameters in
   let x = norm (zeros ([], F32)) (ones ([], F32)) [1; 1; embedding_dim] in
-  let* [y; _] = decoder x in
-  return y
+  let* y = Svi.inference @@ decoder x in
+  return @@ Ir.Var.List.E y
 
 module Device =
   ( val Pjrt_bindings.make
@@ -100,7 +86,7 @@ let train_step set_msg params x =
   (* let x = DeviceValue.of_host_value @@ E x in *)
   let [loss; params] = train_step [params; x] in
   let (E loss) = DeviceValue.to_host_value loss in
-  set_msg @@ Printf.sprintf "Loss: %3.2f" @@ List.hd @@ Ir.Tensor.to_list loss ;
+  set_msg @@ Printf.sprintf "Loss: %9.2f" @@ List.hd @@ Ir.Tensor.to_list loss ;
   params
 
 let num_steps = 25000
@@ -123,7 +109,8 @@ let train () =
     Dataset.map (fun x -> DeviceValue.of_host_value @@ E x) dataset
   in
   let generator = Dataset.to_seq ~num_workers:4 dataset in
-  let generator, set_msg = Dataset.progress num_steps generator in
+  let set_msg = print_endline in
+  (* let generator, set_msg = Dataset.progress num_steps generator in *)
   let train_step = train_step set_msg in
   let rec loop i params generator =
     match Seq.uncons generator with
