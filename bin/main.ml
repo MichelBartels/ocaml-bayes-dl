@@ -5,24 +5,29 @@ let () = Printexc.record_backtrace true
 
 let sigmoid x = 1. /.< (1. +.< exp (-1. *.< x))
 
-let bayesian_parameter batch_size shape =
+let bayesian_parameter batch_size shape var_prior =
   let open Parameters in
   let* (E mean) = new_param (Runtime.HostValue.zeros (E (shape, F32))) in
-  let* (E var) = new_param (E (Ir.Tensor.full F32 shape @@ Float.log 0.001)) in
+  let* (E log_var) =
+    new_param (E (Ir.Tensor.full F32 shape @@ Float.log var_prior))
+  in
   let mean = Ir.Var.BroadcastInDim (mean, [batch_size]) in
-  let var = Ir.Var.BroadcastInDim (exp var, [batch_size]) in
+  let var = Ir.Var.BroadcastInDim (exp log_var, [batch_size]) in
   (* return @@ mean *)
   return
   @@ Svi.sample
-       ~prior:(Normal (zeros_like mean, ones_like mean *.> 0.001))
+       ~prior:(Normal (zeros_like mean, ones_like mean *.> var_prior))
        ~guide:(Normal (mean, var))
 
 let dense ?(activation = sigmoid) in_dims out_dims x =
   let open Parameters in
   let shape = Ir.shape_of_var x in
   let batch_size = List.hd shape in
-  let* w = bayesian_parameter batch_size [in_dims; out_dims] in
-  let* b = bayesian_parameter batch_size [1; out_dims] in
+  let* w =
+    bayesian_parameter batch_size [in_dims; out_dims]
+    @@ Float.sqrt (2. /. float_of_int in_dims)
+  in
+  let* b = bayesian_parameter batch_size [1; out_dims] 1. in
   return @@ activation (matmul x w +@ b)
 
 let embedding_dim = 16
@@ -49,9 +54,9 @@ let vae x =
       ~guide:(Normal (mean', exp logvar))
   in
   let* x' = decoder z in
-  return @@ Distribution.Normal (x', ones_like x')
+  return @@ Distribution.Normal (x', ones_like x' *.> 0.1)
 
-let optim = Optim.adamw ~lr:0.000001
+let optim = Optim.adamw ~lr:0.0003
 
 let train (Ir.Var.List.E x) = optim @@ Svi.elbo x @@ vae x
 
@@ -69,7 +74,7 @@ module Device =
 module Runtime = Runtime.Make (Device)
 open Runtime
 
-let batch_size = 128
+let batch_size = 256
 
 let input_type = ([batch_size; 1; 784], Ir.Tensor.F32)
 
@@ -109,8 +114,8 @@ let train () =
     Dataset.map (fun x -> DeviceValue.of_host_value @@ E x) dataset
   in
   let generator = Dataset.to_seq ~num_workers:4 dataset in
-  let set_msg = print_endline in
-  (* let generator, set_msg = Dataset.progress num_steps generator in *)
+  (* let set_msg = print_endline in *)
+  let generator, set_msg = Dataset.progress num_steps generator in
   let train_step = train_step set_msg in
   let rec loop i params generator =
     match Seq.uncons generator with

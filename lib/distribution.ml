@@ -16,11 +16,11 @@ let sample = function
 
 let log_prob dist x =
   match dist with
-  | Normal (mean, std) ->
+  | Normal (mean, var) ->
       let shape = Ir.shape_of_var mean in
       let axes = List.mapi (fun i _ -> i) shape in
-      let squared_error = (((x -@ mean) /@ std) **.> 2.) /.> 2. in
-      let regulariser = (Float.log (2. *. Float.pi) /. 2.) +.< ln std in
+      let squared_error = (x -@ mean) /@ var *@ ((x -@ mean) /@ var) /.> 2. in
+      let regulariser = (Float.log (2. *. Float.pi) /. 2.) +.< ln var in
       Dsl.sum axes @@ ~-@(squared_error +@ regulariser)
   | Uniform (low, high) ->
       let shape = Ir.shape_of_var low in
@@ -35,6 +35,7 @@ let expectation dist =
       (low +@ high) /.> 2.
 
 let kl p q =
+  (* p = guide q = prior *)
   match (p, q) with
   | Normal (mean_p, std_p), Normal (mean_q, std_q) ->
       let axes = List.mapi (fun i _ -> i) @@ Ir.shape_of_var mean_p in
