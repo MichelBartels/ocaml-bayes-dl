@@ -1,5 +1,6 @@
 (library
  (name iree_bindings)
+ (public_name iree_bindings)
  (libraries
   ctypes
   integers
