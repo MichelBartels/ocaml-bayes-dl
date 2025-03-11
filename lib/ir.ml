@@ -61,6 +61,7 @@ module rec Var : sig
     | Negate : ('a, 'b) u -> ('a, 'b) u
     | Abs : ('a, 'b) u -> ('a, 'b) u
     | Ln : ('a, 'b) u -> ('a, 'b) u
+    | Ln_1_plus : ('a, 'b) u -> ('a, 'b) u
     | Exponential : ('a, 'b) u -> ('a, 'b) u
     | Pow : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Argument : id * ('a, 'b) ValueType.u -> ('a, 'b) u
@@ -141,6 +142,7 @@ end = struct
     | Negate : ('a, 'b) u -> ('a, 'b) u
     | Abs : ('a, 'b) u -> ('a, 'b) u
     | Ln : ('a, 'b) u -> ('a, 'b) u
+    | Ln_1_plus : ('a, 'b) u -> ('a, 'b) u
     | Exponential : ('a, 'b) u -> ('a, 'b) u
     | Pow : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Argument : id * ('a, 'b) ValueType.u -> ('a, 'b) u
@@ -312,6 +314,8 @@ end = struct
     | Negate var ->
         of_var var
     | Ln var ->
+        of_var var
+    | Ln_1_plus var ->
         of_var var
     | Exponential var ->
         of_var var
@@ -568,6 +572,19 @@ let vars_to_ops vars =
               { inputs= var'
               ; outputs= [output]
               ; name= "stablehlo.log"
+              ; attributes= []
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | Ln_1_plus var' ->
+          let var', cache = aux ([], cache) var' in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= var'
+              ; outputs= [output]
+              ; name= "stablehlo.log_plus_one"
               ; attributes= []
               ; anonymous_functions= []
               ; call= false }

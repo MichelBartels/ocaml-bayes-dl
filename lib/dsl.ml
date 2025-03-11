@@ -59,6 +59,8 @@ let abs a = Var.Abs a
 
 let ln a = Var.Ln a
 
+let ln1p a = Var.Ln_1_plus a
+
 let compare dir a b = Var.Compare (a, dir, b)
 
 let min a b = Var.Min (a, b)

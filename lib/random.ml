@@ -72,18 +72,16 @@ let erfinv x =
   let w_gt_5_constants =
     List.map (fun c -> full_like F32 c x) w_gt_5_constants
   in
-  let w = ~-@(ln (1. +.< (x *@ x))) in
+  let w = ~-@(ln1p (x *@ x)) in
   let w_lt_5 = w <.> 5.0 in
   let w = select w_lt_5 (w -.> 2.5) (sqrt w -.> 3.0) in
-  let start_constant =
-    select w_lt_5 (List.hd w_lt_5_constants) (List.hd w_gt_5_constants)
+  let constants =
+    List.map2 (fun a b -> select w_lt_5 a b) w_lt_5_constants w_gt_5_constants
   in
   let p =
-    List.fold_left2
-      (fun p w_lt_5_constant w_gt_5_constant ->
-        let c = select w_lt_5 w_lt_5_constant w_gt_5_constant in
-        c +@ (w *@ p) )
-      start_constant (List.tl w_lt_5_constants) (List.tl w_gt_5_constants)
+    List.fold_left
+      (fun p c -> c +@ (w *@ p))
+      (List.hd constants) (List.tl constants)
   in
   p *@ x
 

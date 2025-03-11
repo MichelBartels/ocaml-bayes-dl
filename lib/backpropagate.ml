@@ -39,6 +39,7 @@ let topological_order : type a b. (a, b) Var.u -> Var.any list =
       | Negate x
       | Abs x
       | Ln x
+      | Ln_1_plus x
       | Exponential x
       | BroadcastInDim (x, _)
       | Transpose (x, _)
@@ -187,6 +188,8 @@ let diff : type a b c d.
           failwith "abs not yet implemented"
       | Ln v ->
           GradMap.add grads v (grad /@ v)
+      | Ln_1_plus v ->
+          GradMap.add grads v (grad /@ (v +@ ones_like v))
       | Exponential v ->
           GradMap.add grads v (grad *@ Exponential v)
       | Pow (v1, v2) ->
