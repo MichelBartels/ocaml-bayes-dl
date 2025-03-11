@@ -46,7 +46,8 @@ let topological_order : type a b. (a, b) Var.u -> Var.any list =
       | Reshape (x, _)
       | Sin x
       | Cos x
-      | Tanh x ->
+      | Tanh x
+      | Sqrt x ->
           let visited, order = loop visited order x in
           let var = Var.Any var in
           (visited, var :: order)
@@ -355,7 +356,10 @@ let diff : type a b c d.
           let x_grad = select cond grad zero_grads in
           let y_grad = select cond zero_grads grad in
           let grads = GradMap.add grads x x_grad in
-          GradMap.add grads y y_grad )
+          GradMap.add grads y y_grad
+      | Sqrt var ->
+          GradMap.add grads var
+            (grad /@ ((ones_like var +@ ones_like var) *@ sqrt var)) )
   in
   let initial_grads = GradMap.add GradMap.empty output (ones_like output) in
   let grads =

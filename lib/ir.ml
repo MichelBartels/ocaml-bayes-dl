@@ -105,6 +105,7 @@ module rec Var : sig
     | Cos : ('a, 'b) u -> ('a, 'b) u
     | Concatenate : ('a, 'b) u list * int -> ('a, 'b) u
     | Select : (Tensor.i1, bool) u * ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Sqrt : ('a, 'b) u -> ('a, 'b) u
 
   type any = Any : ('a, 'b) u -> any
 
@@ -186,6 +187,7 @@ end = struct
     | Cos : ('a, 'b) u -> ('a, 'b) u
     | Concatenate : ('a, 'b) u list * int -> ('a, 'b) u
     | Select : (Tensor.i1, bool) u * ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Sqrt : ('a, 'b) u -> ('a, 'b) u
 
   module VarList : Hlist.S with type ('a, 'b) u = ('a, 'b) u =
   Hlist.Make (struct
@@ -419,6 +421,8 @@ end = struct
         (new_shape, element_type)
     | Select (_, lhs, _) ->
         of_var lhs
+    | Sqrt var ->
+        of_var var
 
   let of_vars l =
     let open Hlist.Map (Var.List) (ValueTypeList) in
@@ -1009,6 +1013,19 @@ let vars_to_ops vars =
               { inputs= condition @ lhs @ rhs
               ; outputs= [output]
               ; name= "stablehlo.select"
+              ; attributes= []
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | Sqrt var' ->
+          let var', cache = aux ([], cache) var' in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= var'
+              ; outputs= [output]
+              ; name= "stablehlo.sqrt"
               ; attributes= []
               ; anonymous_functions= []
               ; call= false }

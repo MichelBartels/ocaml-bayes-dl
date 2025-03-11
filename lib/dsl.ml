@@ -157,7 +157,7 @@ let ( >>.< ) = u64_var_op ( >>@ )
 
 let ( |.< ) = u64_var_op ( |@ )
 
-let sqrt a = a **.> 0.5
+let sqrt a = Var.Sqrt a
 
 let ( ~-@ ) a = Var.Negate a
 
