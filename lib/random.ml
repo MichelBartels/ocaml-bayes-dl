@@ -34,13 +34,58 @@ let uniform_f32 ?(key = key) shape =
   let x = reshape shape x in
   no_grad x
 
+(* let erfinv x = *)
+(*   let sign = select (x <.> 0.0) (full_like F32 (-1.0) x) (full_like F32 1. x) in *)
+(*   let x = (1.0 -.< x) *@ (1.0 +.< x) in *)
+(*   let x = ln x in *)
+(*   let tt1 = (2.0 /. (Float.pi *. 0.147)) +.< (0.5 *.< x) in *)
+(*   let tt2 = 1.0 /. 0.147 *.< x in *)
+(*   (sign *@ tt1 *@ tt1) -@ tt2 *)
+
+(* algorithm from Jax *)
 let erfinv x =
-  let sign = select (x <.> 0.0) (full_like F32 (-1.0) x) (full_like F32 1. x) in
-  let x = (1.0 -.< x) *@ (1.0 +.< x) in
-  let x = ln x in
-  let tt1 = (2.0 /. (Float.pi *. 0.147)) +.< (0.5 *.< x) in
-  let tt2 = 1.0 /. 0.147 *.< x in
-  (sign *@ tt1 *@ tt1) -@ tt2
+  let w_lt_5_constants =
+    [ 2.81022636e-08
+    ; 3.43273939e-07
+    ; -3.5233877e-06
+    ; -4.39150654e-06
+    ; 0.00021858087
+    ; -0.00125372503
+    ; -0.00417768164
+    ; 0.246640727
+    ; 1.50140941 ]
+  in
+  let w_gt_5_constants =
+    [ -0.000200214257
+    ; 0.000100950558
+    ; 0.00134934322
+    ; -0.00367342844
+    ; 0.00573950773
+    ; -0.0076224613
+    ; 0.00943887047
+    ; 1.00167406
+    ; 2.83297682 ]
+  in
+  let w_lt_5_constants =
+    List.map (fun c -> full_like F32 c x) w_lt_5_constants
+  in
+  let w_gt_5_constants =
+    List.map (fun c -> full_like F32 c x) w_gt_5_constants
+  in
+  let w = ~-@(ln (1. +.< (x *@ x))) in
+  let w_lt_5 = w <.> 5.0 in
+  let w = select w_lt_5 (w -.> 2.5) (sqrt w -.> 3.0) in
+  let start_constant =
+    select w_lt_5 (List.hd w_lt_5_constants) (List.hd w_gt_5_constants)
+  in
+  let p =
+    List.fold_left2
+      (fun p w_lt_5_constant w_gt_5_constant ->
+        let c = select w_lt_5 w_lt_5_constant w_gt_5_constant in
+        c +@ (w *@ p) )
+      start_constant (List.tl w_lt_5_constants) (List.tl w_gt_5_constants)
+  in
+  p *@ x
 
 (* let normal_f32 ?(key = key) shape = *)
 (*   let size = List.fold_left ( * ) 1 shape in *)
