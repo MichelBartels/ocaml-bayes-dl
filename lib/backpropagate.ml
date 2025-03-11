@@ -30,7 +30,8 @@ let topological_order : type a b. (a, b) Var.u -> Var.any list =
       | Multiply (x, y)
       | Divide (x, y)
       | Pow (x, y)
-      | DotProduct (x, y, _, _, _, _) ->
+      | DotProduct (x, y, _, _, _, _)
+      | Select (_, x, y) ->
           let visited, order = loop visited order x in
           let visited, order = loop visited order y in
           let var = Var.Any var in
@@ -345,7 +346,13 @@ let diff : type a b c d.
       | Cos var ->
           GradMap.add grads var (grad *@ ~-@(sin var))
       | Concatenate _ ->
-          failwith "backpropagation of concatenate not implemented" )
+          failwith "backpropagation of concatenate not implemented"
+      | Select (cond, x, y) ->
+          let zero_grads = zeros_like grad in
+          let x_grad = select cond grad zero_grads in
+          let y_grad = select cond zero_grads grad in
+          let grads = GradMap.add grads x x_grad in
+          GradMap.add grads y y_grad )
   in
   let initial_grads = GradMap.add GradMap.empty output (ones_like output) in
   let grads =

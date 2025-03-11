@@ -286,3 +286,5 @@ let sin x = Var.Sin x
 let cos x = Var.Cos x
 
 let concat axis vars = Var.Concatenate (vars, axis)
+
+let select cond a b = Var.Select (cond, a, b)

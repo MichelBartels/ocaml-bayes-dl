@@ -103,6 +103,7 @@ module rec Var : sig
     | Sin : ('a, 'b) u -> ('a, 'b) u
     | Cos : ('a, 'b) u -> ('a, 'b) u
     | Concatenate : ('a, 'b) u list * int -> ('a, 'b) u
+    | Select : (Tensor.i1, bool) u * ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
 
   type any = Any : ('a, 'b) u -> any
 
@@ -182,6 +183,7 @@ end = struct
     | Sin : ('a, 'b) u -> ('a, 'b) u
     | Cos : ('a, 'b) u -> ('a, 'b) u
     | Concatenate : ('a, 'b) u list * int -> ('a, 'b) u
+    | Select : (Tensor.i1, bool) u * ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
 
   module VarList : Hlist.S with type ('a, 'b) u = ('a, 'b) u =
   Hlist.Make (struct
@@ -411,6 +413,8 @@ end = struct
             shape
         in
         (new_shape, element_type)
+    | Select (_, lhs, _) ->
+        of_var lhs
 
   let of_vars l =
     let open Hlist.Map (Var.List) (ValueTypeList) in
@@ -974,6 +978,21 @@ let vars_to_ops vars =
               ; outputs= [output]
               ; name= "stablehlo.concatenate"
               ; attributes= [("dimension", string_of_int axis)]
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | Select (condition, lhs, rhs) ->
+          let condition, cache = aux ([], cache) condition in
+          let lhs, cache = aux ([], cache) lhs in
+          let rhs, cache = aux ([], cache) rhs in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= condition @ lhs @ rhs
+              ; outputs= [output]
+              ; name= "stablehlo.select"
+              ; attributes= []
               ; anonymous_functions= []
               ; call= false }
           in
