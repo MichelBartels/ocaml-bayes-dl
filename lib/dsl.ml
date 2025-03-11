@@ -59,6 +59,8 @@ let abs a = Var.Abs a
 
 let ln a = Var.Ln a
 
+let ln1p a = Var.Ln_1_plus a
+
 let compare dir a b = Var.Compare (a, dir, b)
 
 let min a b = Var.Min (a, b)
@@ -155,7 +157,7 @@ let ( >>.< ) = u64_var_op ( >>@ )
 
 let ( |.< ) = u64_var_op ( |@ )
 
-let sqrt a = a **.> 0.5
+let sqrt a = Var.Sqrt a
 
 let ( ~-@ ) a = Var.Negate a
 
@@ -235,6 +237,8 @@ let transpose var permutation =
 
 let scalar_f32 x = full F32 x []
 
+let ( ~. ) = scalar_f32
+
 let scalar_u64 str = full U64 (Unsigned.UInt64.of_string str) []
 
 let assert_float_fn
@@ -284,3 +288,5 @@ let sin x = Var.Sin x
 let cos x = Var.Cos x
 
 let concat axis vars = Var.Concatenate (vars, axis)
+
+let select cond a b = Var.Select (cond, a, b)

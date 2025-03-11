@@ -30,7 +30,8 @@ let topological_order : type a b. (a, b) Var.u -> Var.any list =
       | Multiply (x, y)
       | Divide (x, y)
       | Pow (x, y)
-      | DotProduct (x, y, _, _, _, _) ->
+      | DotProduct (x, y, _, _, _, _)
+      | Select (_, x, y) ->
           let visited, order = loop visited order x in
           let visited, order = loop visited order y in
           let var = Var.Any var in
@@ -38,13 +39,15 @@ let topological_order : type a b. (a, b) Var.u -> Var.any list =
       | Negate x
       | Abs x
       | Ln x
+      | Ln_1_plus x
       | Exponential x
       | BroadcastInDim (x, _)
       | Transpose (x, _)
       | Reshape (x, _)
       | Sin x
       | Cos x
-      | Tanh x ->
+      | Tanh x
+      | Sqrt x ->
           let visited, order = loop visited order x in
           let var = Var.Any var in
           (visited, var :: order)
@@ -164,7 +167,6 @@ let diff : type a b c d.
   let inputs = wrap_inputs l inputs in
   let (E output) = f inputs in
   let order = topological_order output in
-  print_endline "hi" ;
   let backprop : type a b. (a, b) Ir.Var.u -> GradMap.t -> GradMap.t =
    fun var grads ->
     match GradMap.get grads var with
@@ -187,6 +189,8 @@ let diff : type a b c d.
           failwith "abs not yet implemented"
       | Ln v ->
           GradMap.add grads v (grad /@ v)
+      | Ln_1_plus v ->
+          GradMap.add grads v (grad /@ (v +@ ones_like v))
       | Exponential v ->
           GradMap.add grads v (grad *@ Exponential v)
       | Pow (v1, v2) ->
@@ -215,7 +219,6 @@ let diff : type a b c d.
           , rhs_contracting_dims
           , lhs_batching_dims
           , rhs_batching_dims ) ->
-          print_endline "dot product" ;
           let backprop_dot first var var_contracting_dims var_batching_dims
               const const_contracting_dims const_batching_dims =
             let var_shape = Ir.shape_of_var var in
@@ -347,7 +350,16 @@ let diff : type a b c d.
       | Cos var ->
           GradMap.add grads var (grad *@ ~-@(sin var))
       | Concatenate _ ->
-          failwith "backpropagation of concatenate not implemented" )
+          failwith "backpropagation of concatenate not implemented"
+      | Select (cond, x, y) ->
+          let zero_grads = zeros_like grad in
+          let x_grad = select cond grad zero_grads in
+          let y_grad = select cond zero_grads grad in
+          let grads = GradMap.add grads x x_grad in
+          GradMap.add grads y y_grad
+      | Sqrt var ->
+          GradMap.add grads var
+            (grad /@ ((ones_like var +@ ones_like var) *@ sqrt var)) )
   in
   let initial_grads = GradMap.add GradMap.empty output (ones_like output) in
   let grads =

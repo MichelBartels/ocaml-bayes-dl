@@ -61,6 +61,7 @@ module rec Var : sig
     | Negate : ('a, 'b) u -> ('a, 'b) u
     | Abs : ('a, 'b) u -> ('a, 'b) u
     | Ln : ('a, 'b) u -> ('a, 'b) u
+    | Ln_1_plus : ('a, 'b) u -> ('a, 'b) u
     | Exponential : ('a, 'b) u -> ('a, 'b) u
     | Pow : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Argument : id * ('a, 'b) ValueType.u -> ('a, 'b) u
@@ -103,6 +104,8 @@ module rec Var : sig
     | Sin : ('a, 'b) u -> ('a, 'b) u
     | Cos : ('a, 'b) u -> ('a, 'b) u
     | Concatenate : ('a, 'b) u list * int -> ('a, 'b) u
+    | Select : (Tensor.i1, bool) u * ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Sqrt : ('a, 'b) u -> ('a, 'b) u
 
   type any = Any : ('a, 'b) u -> any
 
@@ -140,6 +143,7 @@ end = struct
     | Negate : ('a, 'b) u -> ('a, 'b) u
     | Abs : ('a, 'b) u -> ('a, 'b) u
     | Ln : ('a, 'b) u -> ('a, 'b) u
+    | Ln_1_plus : ('a, 'b) u -> ('a, 'b) u
     | Exponential : ('a, 'b) u -> ('a, 'b) u
     | Pow : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Argument : id * ('a, 'b) ValueType.u -> ('a, 'b) u
@@ -182,6 +186,8 @@ end = struct
     | Sin : ('a, 'b) u -> ('a, 'b) u
     | Cos : ('a, 'b) u -> ('a, 'b) u
     | Concatenate : ('a, 'b) u list * int -> ('a, 'b) u
+    | Select : (Tensor.i1, bool) u * ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
+    | Sqrt : ('a, 'b) u -> ('a, 'b) u
 
   module VarList : Hlist.S with type ('a, 'b) u = ('a, 'b) u =
   Hlist.Make (struct
@@ -311,6 +317,8 @@ end = struct
         of_var var
     | Ln var ->
         of_var var
+    | Ln_1_plus var ->
+        of_var var
     | Exponential var ->
         of_var var
     | Pow (lhs, _) ->
@@ -411,6 +419,10 @@ end = struct
             shape
         in
         (new_shape, element_type)
+    | Select (_, lhs, _) ->
+        of_var lhs
+    | Sqrt var ->
+        of_var var
 
   let of_vars l =
     let open Hlist.Map (Var.List) (ValueTypeList) in
@@ -564,6 +576,19 @@ let vars_to_ops vars =
               { inputs= var'
               ; outputs= [output]
               ; name= "stablehlo.log"
+              ; attributes= []
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | Ln_1_plus var' ->
+          let var', cache = aux ([], cache) var' in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= var'
+              ; outputs= [output]
+              ; name= "stablehlo.log_plus_one"
               ; attributes= []
               ; anonymous_functions= []
               ; call= false }
@@ -974,6 +999,34 @@ let vars_to_ops vars =
               ; outputs= [output]
               ; name= "stablehlo.concatenate"
               ; attributes= [("dimension", string_of_int axis)]
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | Select (condition, lhs, rhs) ->
+          let condition, cache = aux ([], cache) condition in
+          let lhs, cache = aux ([], cache) lhs in
+          let rhs, cache = aux ([], cache) rhs in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= condition @ lhs @ rhs
+              ; outputs= [output]
+              ; name= "stablehlo.select"
+              ; attributes= []
+              ; anonymous_functions= []
+              ; call= false }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | Sqrt var' ->
+          let var', cache = aux ([], cache) var' in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= var'
+              ; outputs= [output]
+              ; name= "stablehlo.sqrt"
+              ; attributes= []
               ; anonymous_functions= []
               ; call= false }
           in
