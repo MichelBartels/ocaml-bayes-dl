@@ -1,4 +1,4 @@
-let sample ~prior ~guide = Effect.perform (Effects.Sample (prior, guide))
+let sample ~prior ~guide = Effect.perform (Distribution.Sample (prior, guide))
 
 let elbo observation parametrised_distr =
   let open Parameters in
@@ -14,7 +14,7 @@ let elbo observation parametrised_distr =
       { effc=
           (fun (type a) (eff : a Effect.t) ->
             match eff with
-            | Effects.Sample (prior, guide) ->
+            | Distribution.Sample (prior, guide) ->
                 Some
                   (fun (k : (a, _) continuation) ->
                     let sample = Distribution.sample guide in
@@ -38,7 +38,7 @@ let inference parametrised =
        { effc=
            (fun (type a) (eff : a Effect.t) ->
              match eff with
-             | Effects.Sample (_, guide) ->
+             | Distribution.Sample (_, guide) ->
                  Some
                    (fun (k : (a, _) continuation) ->
                      let sample = Distribution.sample guide in

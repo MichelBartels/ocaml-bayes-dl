@@ -22,9 +22,12 @@ let random_u64_to_f32 x =
 
 let key = scalar_u64 "0xc8e4fd154ce32f6d"
 
+type _ Effect.t +=
+  | Counter : int -> (Ir.Tensor.u64, Unsigned.uint64) Ir.Var.u Effect.t
+
 let uniform_f32 ?(key = key) shape =
   let total_size = List.fold_left ( * ) 1 shape in
-  let ctr = Effect.perform (Effects.Counter total_size) in
+  let ctr = Effect.perform (Counter total_size) in
   let flat_shape = [total_size] in
   let ctrs = iota 0 flat_shape in
   let ctr = broadcast_scalar ctr flat_shape in
@@ -101,7 +104,7 @@ let erfinv x =
 let normal_f32 ?(key = key) shape =
   Float.sqrt 2. *.< erfinv ((uniform_f32 ~key shape *.> 2.0) -.> 1.0)
 
-let current_seed () = Effect.perform (Effects.Counter 0)
+let current_seed () = Effect.perform (Counter 0)
 
 let handler f (ctr : (Ir.Tensor.u64, Unsigned.uint64) Ir.Var.u) =
   let open Effect.Deep in
@@ -110,7 +113,7 @@ let handler f (ctr : (Ir.Tensor.u64, Unsigned.uint64) Ir.Var.u) =
     { effc=
         (fun (type a) (eff : a Effect.t) ->
           match eff with
-          | Effects.Counter incr ->
+          | Counter incr ->
               Some
                 (fun (k : (a, _) continuation) ->
                   let ctr = !ctr_ref in

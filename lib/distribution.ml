@@ -4,14 +4,16 @@ type t =
   | Normal of (Ir.Tensor.f32, float) Ir.Var.u * (Ir.Tensor.f32, float) Ir.Var.u
   | Uniform of (Ir.Tensor.f32, float) Ir.Var.u * (Ir.Tensor.f32, float) Ir.Var.u
 
+type _ Effect.t += Sample : t * t -> (Ir.Tensor.f32, float) Ir.Var.u Effect.t
+
 let sample = function
   | Normal (mean, std) ->
       let shape = Ir.shape_of_var mean in
-      let sample = norm ~.0. ~.1. shape in
+      let sample = Random.normal_f32 shape in
       (sample *@ std) +@ mean
   | Uniform (low, high) ->
       let shape = Ir.shape_of_var low in
-      let sample = uniform ~.0. ~.1. shape in
+      let sample = Random.uniform_f32 shape in
       (sample *@ (high -@ low)) +@ low
 
 let log_prob dist x =
