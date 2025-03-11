@@ -153,6 +153,7 @@ module Make (Device : Device_api.S) = struct
     in
     let output_type = Ir.ValueType.of_vars func.outputs in
     let func_str = Ir.compile func in
+    print_endline func_str ;
     let model_path = model_path func_str in
     let program =
       if Sys.file_exists model_path then Device.load ~path:model_path
