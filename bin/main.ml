@@ -5,19 +5,18 @@ let () = Printexc.record_backtrace true
 
 let sigmoid x = 1. /.< (1. +.< exp (-1. *.< x))
 
-let bayesian_parameter batch_size shape var_prior =
+let bayesian_parameter batch_size shape std_prior =
   let open Parameters in
   let* (E mean) = new_param (Runtime.HostValue.zeros (E (shape, F32))) in
-  let* (E log_var) =
-    new_param (E (Ir.Tensor.full F32 shape @@ Float.log var_prior))
+  let* (E log_std) =
+    new_param (E (Ir.Tensor.full F32 shape @@ Float.log std_prior))
   in
-  let mean = Ir.Var.BroadcastInDim (mean, [batch_size]) in
-  let var = Ir.Var.BroadcastInDim (exp log_var, [batch_size]) in
   (* return @@ mean *)
   return
   @@ Svi.sample
-       ~prior:(Normal (zeros_like mean, ones_like mean *.> var_prior))
-       ~guide:(Normal (mean, var))
+       ~prior:(Normal (zeros_like mean, ones_like mean *.> std_prior))
+       ~guide:(Normal (mean, exp log_std))
+       ~batch_size ()
 
 let dense ?(activation = sigmoid) in_dims out_dims x =
   let open Parameters in
@@ -36,8 +35,8 @@ let encoder x =
   let open Parameters in
   let* z = dense ~activation:tanh 784 512 x in
   let* mean = dense ~activation:Fun.id 512 embedding_dim z in
-  let* logvar = dense ~activation:Fun.id 512 embedding_dim z in
-  return (mean, logvar)
+  let* logstd = dense ~activation:Fun.id 512 embedding_dim z in
+  return (mean, logstd)
 
 let decoder z =
   let open Parameters in
@@ -47,16 +46,16 @@ let decoder z =
 
 let vae x =
   let open Parameters in
-  let* mean', logvar = encoder x in
+  let* mean', logstd = encoder x in
   let z =
     Svi.sample
       ~prior:(Normal (zeros_like mean', ones_like mean'))
-      ~guide:(Normal (mean', exp logvar))
+      ~guide:(Normal (mean', exp logstd)) ()
   in
   let* x' = decoder z in
   return @@ Distribution.Normal (x', ones_like x' *.> 0.1)
 
-let optim = Optim.adamw ~lr:0.0003
+let optim = Optim.adamw ~lr:0.001
 
 let train (Ir.Var.List.E x) = optim @@ Svi.elbo x @@ vae x
 
@@ -68,7 +67,7 @@ let decode Ir.Var.List.[] =
 
 module Device =
   ( val Pjrt_bindings.make
-          "/home/michel/part-ii-project/xla/bazel-bin/xla/pjrt/c/pjrt_c_api_cpu_plugin.so"
+          "/home/michel/part-ii-project/xla/bazel-bin/xla/pjrt/c/pjrt_c_api_gpu_plugin.so"
     )
 
 module Runtime = Runtime.Make (Device)
@@ -91,7 +90,7 @@ let train_step set_msg params x =
   (* let x = DeviceValue.of_host_value @@ E x in *)
   let [loss; params] = train_step [params; x] in
   let (E loss) = DeviceValue.to_host_value loss in
-  set_msg @@ Printf.sprintf "Loss: %9.2f" @@ List.hd @@ Ir.Tensor.to_list loss ;
+  set_msg @@ Printf.sprintf "Loss: %9.9f" @@ List.hd @@ Ir.Tensor.to_list loss ;
   params
 
 let num_steps = 25000
@@ -114,7 +113,6 @@ let train () =
     Dataset.map (fun x -> DeviceValue.of_host_value @@ E x) dataset
   in
   let generator = Dataset.to_seq ~num_workers:4 dataset in
-  (* let set_msg = print_endline in *)
   let generator, set_msg = Dataset.progress num_steps generator in
   let train_step = train_step set_msg in
   let rec loop i params generator =
