@@ -1,4 +1,4 @@
-let sample ~prior ~guide ?batch_size () = Effect.perform (Effects.Sample (prior, guide, batch_size))
+let sample ~prior ~guide ?batch_size () = Effect.perform (Distribution.Sample (prior, guide, batch_size))
 
 let elbo observation parametrised_distr =
   let open Parameters in
@@ -14,7 +14,7 @@ let elbo observation parametrised_distr =
       { effc=
           (fun (type a) (eff : a Effect.t) ->
             match eff with
-            | Effects.Sample (prior, guide, batch_size) ->
+            | Distribution.Sample (prior, guide, batch_size) ->
                 Some
                   (fun (k : (a, _) continuation) ->
                     let sample = Distribution.sample guide batch_size in
@@ -41,7 +41,7 @@ let inference parametrised =
        { effc=
            (fun (type a) (eff : a Effect.t) ->
              match eff with
-             | Effects.Sample (_, guide, batch_size) ->
+             | Distribution.Sample (_, guide, batch_size) ->
                  Some
                    (fun (k : (a, _) continuation) ->
                      let sample = Distribution.sample guide batch_size in
