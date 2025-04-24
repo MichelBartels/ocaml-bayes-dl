@@ -38,12 +38,9 @@ let dense ?(activation = sigmoid) in_dims out_dims x =
   let open Parameters in
   let shape = Ir.shape_of_var x in
   let batch_size = List.hd shape in
-  let* (E w) =
-    new_param (E (normal_tensor 0. 0.01 [batch_size; in_dims; out_dims]))
-  in
-  let* (E b) =
-    new_param (E (normal_tensor 0. 0.01 [batch_size; 1; out_dims]))
-  in
+  let* (E w) = new_param (E (normal_tensor 0. 0.01 [in_dims; out_dims])) in
+  let* (E b) = new_param (E (normal_tensor 0. 0.01 [1; out_dims])) in
+  let b = Ir.Var.BroadcastInDim (b, [batch_size]) in
   return @@ activation (matmul x w +@ b)
 
 let embedding_dim = 16
