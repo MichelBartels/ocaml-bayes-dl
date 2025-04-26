@@ -53,7 +53,7 @@ let log_prob ?batch_size dist x =
       let scaled_diff = (x -@ mean) /@ stddev in
       let squared_error = scaled_diff *@ scaled_diff /.> 2. in
       let regulariser = (Float.log (2. *. Float.pi) /. 2.) +.< ln stddev in
-      Dsl.sum axes @@ ~-@(squared_error +@ regulariser)
+      sum axes @@ ~-@(squared_error +@ regulariser)
   | Uniform (low, high) ->
       let low, high =
         match batch_size with
@@ -66,7 +66,7 @@ let log_prob ?batch_size dist x =
       in
       let shape = Ir.shape_of_var low in
       let axes = List.mapi (fun i _ -> i) shape in
-      Dsl.sum axes @@ ~-@(ln (high -@ low))
+      sum axes @@ ~-@(ln (high -@ low))
 
 let expectation dist =
   match dist with
@@ -79,11 +79,12 @@ let kl p q =
   (* p = guide q = prior *)
   match (p, q) with
   | Normal (mean_p, std_p), Normal (mean_q, std_q) ->
-      let var_ratio = std_p /@ std_q in
+      let std_ratio = std_p /@ std_q in
       let scaled_diff = (mean_p -@ mean_q) /@ std_q in
       let squared_diff = scaled_diff *@ scaled_diff in
       let axes = List.mapi (fun i _ -> i) @@ Ir.shape_of_var mean_p in
-      Dsl.sum axes
-        ((var_ratio +@ squared_diff -.> 1. +@ ln std_q -@ ln std_p) /.> 2.)
+      sum axes
+        ( ln (std_q /@ std_p)
+        +@ (((std_ratio *@ std_ratio) +@ squared_diff -.> 1.) /.> 2.) )
   | _ ->
       failwith "ELBO not implemented for this distribution"
