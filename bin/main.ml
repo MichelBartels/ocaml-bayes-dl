@@ -36,7 +36,8 @@ let reconstruct =
 
 let train_step set_msg params x =
   (* let x = DeviceValue.of_host_value @@ E x in *)
-  let [kl; _] = kl ~collect:false [params; x] in
+  let [kl; delete] = kl ~collect:false [params; x] in
+  DeviceValue.collect delete ;
   let (E kl) = DeviceValue.to_host_value kl in
   let [loss; params] = train_step [params; x] in
   let (E loss) = DeviceValue.to_host_value loss in
