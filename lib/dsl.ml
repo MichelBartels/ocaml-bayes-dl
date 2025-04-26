@@ -35,23 +35,47 @@ let matmul a b =
     , batching_dims
     , batching_dims )
 
-let ( +@ ) a b = Var.Add (a, b)
+let assert_same_shape a b =
+  let a_shape = Ir.shape_of_var a in
+  let b_shape = Ir.shape_of_var b in
+  if List.length a_shape <> List.length b_shape then
+    failwith "assert_same_shape: different number of dimensions" ;
+  if not (List.for_all2 ( = ) a_shape b_shape) then
+    failwith "assert_same_shape: different shapes"
 
-let ( -@ ) a b = Var.Subtract (a, b)
+let ( +@ ) a b =
+  assert_same_shape a b ;
+  Var.Add (a, b)
 
-let ( *@ ) a b = Var.Multiply (a, b)
+let ( -@ ) a b =
+  assert_same_shape a b ;
+  Var.Subtract (a, b)
 
-let ( /@ ) a b = Var.Divide (a, b)
+let ( *@ ) a b =
+  assert_same_shape a b ;
+  Var.Multiply (a, b)
 
-let ( <<@ ) a b = Var.LeftShift (a, b)
+let ( /@ ) a b =
+  assert_same_shape a b ;
+  Var.Divide (a, b)
 
-let ( >>@ ) a b = Var.RightShift (a, b)
+let ( <<@ ) a b =
+  assert_same_shape a b ;
+  Var.LeftShift (a, b)
 
-let ( |@ ) a b = Var.Or (a, b)
+let ( >>@ ) a b =
+  assert_same_shape a b ;
+  Var.RightShift (a, b)
+
+let ( |@ ) a b =
+  assert_same_shape a b ;
+  Var.Or (a, b)
 
 let exp a = Var.Exponential a
 
-let pow a b = Var.Pow (a, b)
+let pow a b =
+  assert_same_shape a b ;
+  Var.Pow (a, b)
 
 let ( **@ ) = pow
 
@@ -61,11 +85,17 @@ let ln a = Var.Ln a
 
 let ln1p a = Var.Ln_1_plus a
 
-let compare dir a b = Var.Compare (a, dir, b)
+let compare dir a b =
+  assert_same_shape a b ;
+  Var.Compare (a, dir, b)
 
-let min a b = Var.Min (a, b)
+let min a b =
+  assert_same_shape a b ;
+  Var.Min (a, b)
 
-let max a b = Var.Max (a, b)
+let max a b =
+  assert_same_shape a b ;
+  Var.Max (a, b)
 
 let ( =@ ) a = compare Ir.Eq a
 
@@ -222,7 +252,7 @@ let mean axes x =
   let size =
     List.filteri (fun i _ -> List.mem i axes) shape |> List.fold_left ( * ) 1
   in
-  sum axes x /.> float_of_int size
+  sum axes (x /.> float_of_int size)
 
 let transpose var permutation =
   let shape = Ir.shape_of_var var in
@@ -290,3 +320,8 @@ let cos x = Var.Cos x
 let concat axis vars = Var.Concatenate (vars, axis)
 
 let select cond a b = Var.Select (cond, a, b)
+
+let print_shape var =
+  let shape = Ir.shape_of_var var in
+  let shape = List.map string_of_int shape in
+  Printf.printf "Shape: [%s]\n" (String.concat "; " shape)

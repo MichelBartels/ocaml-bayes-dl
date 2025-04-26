@@ -40,10 +40,10 @@ let uniform_f32 ?(key = key) shape =
 let erfinv x =
   let sign = select (x <.> 0.0) (full_like F32 (-1.0) x) (full_like F32 1. x) in
   let x = (1.0 -.< x) *@ (1.0 +.< x) in
-  let x = ln x in
+  let x = ln (x +.> 1e-20) in
   let tt1 = (2.0 /. (Float.pi *. 0.147)) +.< (0.5 *.< x) in
-  let tt2 = 1.0 /. 0.147 *.< x in
-  (sign *@ tt1 *@ tt1) -@ tt2
+  let tt2 = x /.> 0.147 in
+  sign *@ sqrt (sqrt ((tt1 *@ tt1) -@ tt2) -@ tt1)
 
 (* algorithm from Jax *)
 (* let erfinv x = *)
@@ -103,12 +103,6 @@ let erfinv x =
 
 let normal_f32 ?(key = key) shape =
   Float.sqrt 2. *.< erfinv ((uniform_f32 ~key shape *.> 2.0) -.> 1.0)
-
-let _ = normal_f32
-
-let normal_f32 ?(key = key) shape =
-  ignore key ;
-  zeros (shape, F32)
 
 let current_seed () = Effect.perform (Counter 0)
 

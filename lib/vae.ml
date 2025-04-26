@@ -55,8 +55,8 @@ let encoder x =
 let decoder z =
   let open Parameters in
   let* z = dense_bayesian ~activation:tanh embedding_dim 512 z in
-  let* z = dense_bayesian 512 784 z in
-  return (z *.> 100.)
+  let* z = dense_bayesian ~activation:Fun.id 512 784 z in
+  return @@ sigmoid (z *.> 100.)
 
 let vae x =
   let open Parameters in
@@ -68,9 +68,9 @@ let vae x =
       ()
   in
   let* x' = decoder z in
-  return @@ Distribution.Normal (x', ones_like x' *.> 0.02)
+  return @@ Distribution.Normal (x', ones_like x' *.> 0.01)
 
-let optim = Optim.adamw ~lr:0.001
+let optim = Optim.adamw ~lr:1e-3
 
 let train (Ir.Var.List.E x) = optim @@ Svi.elbo x @@ vae x
 

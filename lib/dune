@@ -8,4 +8,5 @@
   device_api
   pjrt_bindings
   graphics
-  domainslib))
+  domainslib
+  stb_image_write))

@@ -20,6 +20,10 @@ let elbo observation parametrised_distr =
                   (fun (k : (a, _) continuation) ->
                     let sample = Distribution.sample guide batch_size in
                     let kl' = Distribution.kl guide prior in
+                    (* let kl' = *)
+                    (*   Distribution.log_prob ?batch_size prior sample *)
+                    (*   -@ Distribution.log_prob ?batch_size guide sample *)
+                    (* in *)
                     kl := !kl +@ kl' ;
                     continue k sample )
             | _ ->

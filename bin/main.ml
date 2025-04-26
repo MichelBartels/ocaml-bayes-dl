@@ -8,12 +8,14 @@ module Device =
 module Runtime = Runtime.Make (Device)
 open Runtime
 
-let batch_size = 256
+let batch_size = 512
 
 let input_type = ([batch_size; 1; 784], Ir.Tensor.F32)
 
 let train_step =
+  print_endline "getting param type" ;
   let param_type = Parameters.param_type (E input_type) Vae.train in
+  print_endline "got param type" ;
   compile [param_type; E input_type]
   @@ fun [params; x] -> Parameters.to_fun (Vae.train x) params
 
@@ -25,17 +27,25 @@ let train_step set_msg params x =
   (* let x = DeviceValue.of_host_value @@ E x in *)
   let [loss; params] = train_step [params; x] in
   let (E loss) = DeviceValue.to_host_value loss in
-  set_msg @@ Printf.sprintf "Loss: %9.9f" @@ List.hd @@ Ir.Tensor.to_list loss ;
+  set_msg @@ Printf.sprintf "Loss: %15.9f" @@ List.hd @@ Ir.Tensor.to_list loss ;
   params
 
 let num_steps = 25000
 
-let show_sample params () =
+(* let show_sample params () = *)
+(*   let Runtime.DeviceValue.(inference_params :: _) = params in *)
+(*   let Runtime.DeviceValue.[_; decoder_params] = inference_params in *)
+(*   let y = decode ~collect:false [decoder_params] in *)
+(*   let (E y) = DeviceValue.to_host_value y in *)
+(*   Mnist.plot y *)
+
+let save_sample params i =
   let Runtime.DeviceValue.(inference_params :: _) = params in
   let Runtime.DeviceValue.[_; decoder_params] = inference_params in
   let y = decode ~collect:false [decoder_params] in
   let (E y) = DeviceValue.to_host_value y in
-  Mnist.plot y
+  if not @@ Sys.file_exists "samples" then Unix.mkdir "samples" 0o755 ;
+  Mnist.save y (Printf.sprintf "samples/sample_%d.png" i)
 
 let train () =
   let params =
@@ -55,12 +65,16 @@ let train () =
     | None ->
         params
     | Some (batch, generator) ->
+        if i mod 1000 = 0 then save_sample params i ;
         loop (i + 1) (train_step params batch) generator
   in
   loop 1 params generator
 
-let _ =
-  let params = train () in
-  while true do
-    show_sample params ()
-  done
+let _ = train ()
+
+(* let _ = *)
+(*   let params = train () in *)
+(*   let _ = (params, show_sample) in *)
+(*   while true do *)
+(*     () (\* show_sample params () *\) *)
+(*   done *)

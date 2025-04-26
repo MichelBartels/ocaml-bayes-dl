@@ -1,13 +1,13 @@
 open Dsl
 
-let sgd lr f =
+let sgd ?(lr = 0.001) f =
   let open Parameters in
   let* params = params_for f in
   let [grad; loss] = Backpropagate.grad_and_value (to_fun f) params in
   return
     Ir.Var.List.[loss; [float_map2 (fun p g -> p -@ (g *.> lr)) params grad]]
 
-let adamw ?(lr = 0.001) ?(betas = (0.9, 0.999)) ?(eps = 1e-08)
+let adamw ?(lr = 0.001) ?(betas = (0.9, 0.999)) ?(eps = 1e-8)
     ?(weight_decay = 0.01) f =
   let open Parameters in
   let* params = params_for f in
@@ -16,9 +16,7 @@ let adamw ?(lr = 0.001) ?(betas = (0.9, 0.999)) ?(eps = 1e-08)
   let* (E t) = new_param (E (Ir.Tensor.scalar_f32 1.)) in
   let* m = new_param (Runtime.HostValue.zeros (Ir.ValueType.of_vars params)) in
   let* v = new_param (Runtime.HostValue.zeros (Ir.ValueType.of_vars params)) in
-  let params =
-    float_map2 (fun p g -> p -@ (g *.> (lr *. weight_decay))) params grad
-  in
+  let params = float_map (fun p -> p -@ (p *.> (lr *. weight_decay))) params in
   let m =
     float_map2 (fun m g -> (beta1 *.< m) +@ ((1. -. beta1) *.< g)) m grad
   in
