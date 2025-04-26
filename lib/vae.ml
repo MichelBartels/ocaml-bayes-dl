@@ -79,3 +79,9 @@ let decode Ir.Var.List.[] =
   let x = norm (zeros ([], F32)) (ones ([], F32)) [1; 1; embedding_dim] in
   let* y = Svi.inference @@ decoder x in
   return @@ Ir.Var.List.E y
+
+let reconstruct (Ir.Var.List.E x) =
+  let open Parameters in
+  let* y = Svi.inference @@ vae x in
+  let y = Distribution.sample y None in
+  return @@ Ir.Var.List.E y
