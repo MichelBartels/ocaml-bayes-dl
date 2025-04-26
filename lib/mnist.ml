@@ -61,11 +61,11 @@ let save img path =
   let open Bigarray in
   let arr = Array1.create Int8_unsigned c_layout (28 * 28) in
   let open Ir.Tensor in
-  for i = 0 to 27 do
-    for j = 0 to 27 do
-      let v = get img [0; 0; (j * 28) + i] in
-      let colour = int_of_float (255. *. (1. -. v)) in
-      Array1.set arr ((i * 28) + j) colour
-    done
+  for i = 0 to (28 * 28) - 1 do
+    let v = get img [0; 0; i] in
+    let colour = 255. *. v in
+    let colour = int_of_float colour in
+    let colour = max 0 (min 255 colour) in
+    Array1.set arr i colour
   done ;
   Stb_image_write.png path ~w:28 ~h:28 ~c:1 arr
