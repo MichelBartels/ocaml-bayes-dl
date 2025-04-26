@@ -8,7 +8,7 @@ let sgd ?(lr = 0.001) f =
     Ir.Var.List.[loss; [float_map2 (fun p g -> p -@ (g *.> lr)) params grad]]
 
 let adamw ?(lr = 0.001) ?(betas = (0.9, 0.999)) ?(eps = 1e-8)
-    ?(weight_decay = 0.01) f =
+    ?(weight_decay = 0.0001) f =
   let open Parameters in
   let* params = params_for f in
   let [grad; loss] = Backpropagate.grad_and_value (to_fun f) params in

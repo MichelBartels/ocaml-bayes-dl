@@ -14,7 +14,7 @@ let bayesian_parameter batch_size shape std_prior =
        ~guide:(Normal (mean, exp log_std))
        ~batch_size ()
 
-let dense_bayesian ?(activation = sigmoid) in_dims out_dims x =
+let dense_bayesian ?(activation = tanh) in_dims out_dims x =
   let open Parameters in
   let shape = Ir.shape_of_var x in
   let batch_size = List.hd shape in
@@ -34,7 +34,7 @@ let normal_tensor mean std shape =
   let list = List.init len (fun _ -> normal mean std) in
   Ir.Tensor.of_list F32 shape list
 
-let dense ?(activation = sigmoid) in_dims out_dims x =
+let dense ?(activation = tanh) in_dims out_dims x =
   let open Parameters in
   let shape = Ir.shape_of_var x in
   let batch_size = List.hd shape in
@@ -47,24 +47,24 @@ let embedding_dim = 16
 
 let encoder x =
   let open Parameters in
-  let* z = dense ~activation:tanh 784 512 x in
+  let* z = dense 784 512 x in
   let* mean = dense ~activation:Fun.id 512 embedding_dim z in
-  let* logstd = dense ~activation:Fun.id 512 embedding_dim z in
-  return (mean, logstd)
+  let* std = dense ~activation:exp 512 embedding_dim z in
+  return (mean, std)
 
 let decoder z =
   let open Parameters in
-  let* z = dense_bayesian ~activation:tanh embedding_dim 512 z in
+  let* z = dense_bayesian embedding_dim 512 z in
   let* z = dense_bayesian ~activation:Fun.id 512 784 z in
   return @@ sigmoid (z *.> 100.)
 
 let vae x =
   let open Parameters in
-  let* mean', logstd = encoder x in
+  let* mean', std = encoder x in
   let z =
     Svi.sample
       ~prior:(Normal (zeros_like mean', ones_like mean'))
-      ~guide:(Normal (mean', exp logstd))
+      ~guide:(Normal (mean', std))
       ()
   in
   let* x' = decoder z in
@@ -72,7 +72,8 @@ let vae x =
 
 let optim = Optim.adamw ~lr:1e-3
 
-let train (Ir.Var.List.E x) = optim @@ Svi.elbo x @@ vae x
+let train ?(only_kl = false) (Ir.Var.List.E x) =
+  optim @@ Svi.elbo ~only_kl x @@ vae x
 
 let decode Ir.Var.List.[] =
   let open Parameters in

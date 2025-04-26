@@ -13,11 +13,16 @@ let batch_size = 512
 let input_type = ([batch_size; 1; 784], Ir.Tensor.F32)
 
 let train_step =
-  print_endline "getting param type" ;
   let param_type = Parameters.param_type (E input_type) Vae.train in
-  print_endline "got param type" ;
   compile [param_type; E input_type]
   @@ fun [params; x] -> Parameters.to_fun (Vae.train x) params
+
+let kl =
+  let param_type =
+    Parameters.param_type (E input_type) (Vae.train ~only_kl:true)
+  in
+  compile [param_type; E input_type]
+  @@ fun [params; x] -> Parameters.to_fun (Vae.train ~only_kl:true x) params
 
 let decode =
   let param_type = Parameters.param_type [] Vae.decode in
@@ -31,9 +36,14 @@ let reconstruct =
 
 let train_step set_msg params x =
   (* let x = DeviceValue.of_host_value @@ E x in *)
+  let [kl; _] = kl ~collect:false [params; x] in
+  let (E kl) = DeviceValue.to_host_value kl in
   let [loss; params] = train_step [params; x] in
   let (E loss) = DeviceValue.to_host_value loss in
-  set_msg @@ Printf.sprintf "Loss: %15.9f" @@ List.hd @@ Ir.Tensor.to_list loss ;
+  set_msg
+  @@ Printf.sprintf "Loss: %15.9f KL: %15.9f"
+       (List.hd @@ Ir.Tensor.to_list loss)
+       (List.hd @@ Ir.Tensor.to_list kl) ;
   params
 
 let num_steps = 25000
@@ -80,7 +90,7 @@ let train () =
     | _ ->
         params
   in
-  loop 1 params generator sample_dataset
+  loop 0 params generator sample_dataset
 
 let _ = train ()
 

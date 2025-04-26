@@ -103,7 +103,7 @@ let progress total seq =
       ++ spacer 2 ++ count_to total ++ spacer 2 ++ eta total ++ spacer 2
       ++ elapsed () )
   in
-  let info = Line.(rpad 40 string) in
+  let info = Line.(rpad 80 string) in
   let bar = Multi.(line bar ++ line info) in
   let display = Display.start bar in
   let [set_progress; set_msg] = Display.reporters display in

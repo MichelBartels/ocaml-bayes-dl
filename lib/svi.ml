@@ -1,7 +1,7 @@
 let sample ~prior ~guide ?batch_size () =
   Effect.perform (Distribution.Sample (prior, guide, batch_size))
 
-let elbo observation parametrised_distr =
+let elbo ?(only_kl = false) observation parametrised_distr =
   let open Parameters in
   flatten
   @@
@@ -9,7 +9,7 @@ let elbo observation parametrised_distr =
   let* params = params_for parametrised_distr in
   let f = to_fun parametrised_distr in
   let open Dsl in
-  let kl = ref ~.0. in
+  let kls = ref [] in
   let distribution =
     try_with f params
       { effc=
@@ -19,17 +19,22 @@ let elbo observation parametrised_distr =
                 Some
                   (fun (k : (a, _) continuation) ->
                     let sample = Distribution.sample guide batch_size in
-                    let kl' = Distribution.kl guide prior in
-                    (* let kl' = *)
+                    let kl = Distribution.kl guide prior in
+                    (* let kl = *)
                     (*   Distribution.log_prob ?batch_size prior sample *)
                     (*   -@ Distribution.log_prob ?batch_size guide sample *)
                     (* in *)
-                    kl := !kl +@ kl' ;
+                    kls := kl :: !kls ;
                     continue k sample )
             | _ ->
                 None ) }
   in
-  return @@ Ir.Var.List.E (!kl -@ Distribution.log_prob distribution observation)
+  let kl = List.fold_left ( +@ ) ~.0. !kls in
+  return
+  @@ Ir.Var.List.E
+       ( kl
+       -@ Distribution.log_prob distribution observation
+          *.> if only_kl then 0. else 1. )
 
 let inference parametrised =
   let open Parameters in
