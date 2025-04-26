@@ -76,7 +76,7 @@ let train (Ir.Var.List.E x) = optim @@ Svi.elbo x @@ vae x
 
 let decode Ir.Var.List.[] =
   let open Parameters in
-  let x = norm (zeros ([], F32)) (ones ([], F32)) [1; 1; embedding_dim] in
+  let x = Random.normal_f32 [1; 1; embedding_dim] in
   let* y = Svi.inference @@ decoder x in
   return @@ Ir.Var.List.E y
 
