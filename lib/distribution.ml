@@ -80,11 +80,10 @@ let kl p q =
   match (p, q) with
   | Normal (mean_p, std_p), Normal (mean_q, std_q) ->
       let std_ratio = std_p /@ std_q in
+      let var_ratio = std_ratio *@ std_ratio in
       let scaled_diff = (mean_p -@ mean_q) /@ std_q in
       let squared_diff = scaled_diff *@ scaled_diff in
       let axes = List.mapi (fun i _ -> i) @@ Ir.shape_of_var mean_p in
-      sum axes
-        ( ln (std_q /@ std_p)
-        +@ (((std_ratio *@ std_ratio) +@ squared_diff -.> 1.) /.> 2.) )
+      sum axes ((var_ratio +@ squared_diff -.> 1. -@ ln var_ratio) /.> 2.)
   | _ ->
       failwith "ELBO not implemented for this distribution"
