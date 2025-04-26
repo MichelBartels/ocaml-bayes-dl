@@ -72,6 +72,13 @@ module Make (Device : Device_api.S) = struct
           []
       | hd :: tl ->
           to_host_value hd :: to_host_value tl
+
+    let collect : type a. a t -> unit =
+     fun t ->
+      let list = List.to_any_list t in
+      Stdlib.List.iter
+        (fun (Any buffer) -> Device.collect_buffer buffer.buffer)
+        list
   end
 
   module Function : sig
