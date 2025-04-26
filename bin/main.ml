@@ -24,6 +24,7 @@ let decode =
   compile param_type @@ fun params -> Parameters.to_fun (Vae.decode []) params
 
 let reconstruct =
+  let input_type = ([1; 1; 784], Ir.Tensor.F32) in
   let [param_type] = Parameters.param_type (E input_type) Vae.reconstruct in
   compile [param_type; E input_type]
   @@ fun [params; x] -> Parameters.to_fun (Vae.reconstruct x) [params]
