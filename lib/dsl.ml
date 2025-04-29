@@ -309,7 +309,15 @@ let convert dtype var = Var.Convert (var, dtype)
 
 let iota n var = Var.Iota (n, var)
 
-let reshape shape var = Var.Reshape (var, shape)
+let reshape shape var =
+  let size1 = List.fold_left ( * ) 1 shape in
+  let size2 = List.fold_left ( * ) 1 (Ir.shape_of_var var) in
+  if size1 <> size2 then
+    failwith
+      (Printf.sprintf "reshape: incompatible shapes %s and %s"
+         (String.concat ", " (List.map string_of_int shape))
+         (String.concat ", " (List.map string_of_int (Ir.shape_of_var var))) ) ;
+  Var.Reshape (var, shape)
 
 let no_grad x = Ir.Var.NoGrad x
 
@@ -319,7 +327,10 @@ let cos x = Var.Cos x
 
 let concat axis vars = Var.Concatenate (vars, axis)
 
-let select cond a b = Var.Select (cond, a, b)
+let select cond a b =
+  assert_same_shape a b ;
+  assert_same_shape cond a ;
+  Var.Select (cond, a, b)
 
 let print_shape var =
   let shape = Ir.shape_of_var var in

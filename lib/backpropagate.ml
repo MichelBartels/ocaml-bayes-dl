@@ -299,9 +299,7 @@ let diff : type a b c d.
       | BroadcastInDim (var, dims) -> (
         match Ir.ValueType.of_var var with
         | _, Ir.Tensor.F32 ->
-            let reduced_grad =
-              Dsl.sum (List.init (List.length dims) Fun.id) grad
-            in
+            let reduced_grad = sum (List.init (List.length dims) Fun.id) grad in
             GradMap.add grads var reduced_grad
         | _ ->
             failwith "can only differentiate broadcasting of f32 tensors" )
