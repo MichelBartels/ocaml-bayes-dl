@@ -27,18 +27,18 @@ let load_images t =
       let img =
         List.init 784 (fun i ->
             float_of_int (String.get_uint8 str (offset + i)) /. 255. )
-        |> Ir.Tensor.of_list F32 [1; 784]
+        |> Tensor.of_list F32 [1; 784]
       in
       img )
 
-let plot (img : (Ir.Tensor.f32, float) Ir.Tensor.t) =
+let plot (img : (Tensor.f32, float) Tensor.t) =
   let open Graphics in
   let scale = 50 in
   let w = 28 * scale in
   let h = 28 * scale in
   open_graph @@ " " ^ string_of_int w ^ "x" ^ string_of_int h ;
   set_window_title "MNIST" ;
-  let open Ir.Tensor in
+  let open Tensor in
   clear_graph () ;
   set_color black ;
   fill_rect 0 0 w h ;
@@ -60,7 +60,7 @@ let plot (img : (Ir.Tensor.f32, float) Ir.Tensor.t) =
 let save img path =
   let open Bigarray in
   let arr = Array1.create Int8_unsigned c_layout (28 * 28) in
-  let open Ir.Tensor in
+  let open Tensor in
   for i = 0 to (28 * 28) - 1 do
     let v = get img [0; 0; i] in
     let colour = 255. *. v in

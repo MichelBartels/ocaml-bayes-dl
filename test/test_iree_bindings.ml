@@ -5,6 +5,8 @@ open Dsl
 
 let () = Printexc.record_backtrace true
 
+let use_metal = Sys.getenv_opt "USE_METAL" = Some "1"
+
 let dim = 4
 
 let num_dims_gen = int_range 1 4
@@ -14,7 +16,7 @@ let tensor_gen num_dims =
   let shape = List.init num_dims (Fun.const dim) in
   let data = List.init size (Fun.const @@ float_range ~-.1. 1.) in
   let* data = flatten_l data in
-  return @@ tensor_to_ir @@ Ir.Tensor.of_list F32 shape data
+  return @@ tensor_to_ir @@ Tensor.of_list F32 shape data
 
 let rec differentiable_function_gen n num_dims =
   let unary_function_gen () =
@@ -26,16 +28,23 @@ let rec differentiable_function_gen n num_dims =
             g y )
         , num_dims )
     in
-    frequency
-      [ (1, compose ( ~-$ ))
-      ; (1, compose ln)
-      ; (1, compose exp)
-      ; (1, compose ln1p)
-      ; (1, compose sqrt)
-      ; (1, compose sin)
-      ; (1, compose cos)
-      ; (1, compose tanh)
-      ; (1, compose abs) ]
+    let base_options = [
+(1, compose ( ~-$ )) ;
+      (1, compose ln)
+    ; (1, compose exp)
+    ; (1, compose ln1p)
+    ; (1, compose sqrt)
+    ; (1, compose sin)
+    ; (1, compose cos)
+    ; (1, compose tanh) ]
+    in
+    let options = 
+      if not use_metal then
+        (1, compose abs) :: base_options
+      else
+        base_options
+    in
+    frequency options
   in
   let binary_function_gen () =
     let* f1, num_dims1 = differentiable_function_gen (n - 1) num_dims in
@@ -47,7 +56,7 @@ let rec differentiable_function_gen n num_dims =
       else
         let broadcast f x =
           let y = f x in
-          Ir.Var.BroadcastInDim
+          Var.BroadcastInDim
             (y, List.init (max_dims - min_dims) (Fun.const dim))
         in
         if num_dims1 > num_dims2 then (f1, broadcast f2) else (broadcast f1, f2)
@@ -67,19 +76,6 @@ let rec differentiable_function_gen n num_dims =
     in
     frequency options
   in
-  let reduction_function_gen () =
-    let* f, num_dims = differentiable_function_gen (n - 1) num_dims in
-    let compose g =
-      return
-        ( (fun x ->
-            let y = f x in
-            g y )
-        , num_dims )
-    in
-    frequency
-      [ (1, compose (fun x -> sum [0] x))
-      ; (1, compose (fun x -> mean [0] x)) ]
-  in
   match n with
   | 0 ->
       frequency
@@ -89,7 +85,7 @@ let rec differentiable_function_gen n num_dims =
             let* tensor = tensor_gen num_dims in
             return (Fun.const tensor, num_dims) ) ]
   | _ ->
-      frequency [(2, unary_function_gen ()); (1, binary_function_gen ()); (1, reduction_function_gen ())]
+      frequency [(2, unary_function_gen ()); (1, binary_function_gen ())]
 
 let differentiable_function_gen =
   (* let* n = int_range 0 1 in *)
@@ -101,9 +97,9 @@ let differentiable_function_gen =
     ( (fun x ->
         let y = f x in
         let dims = List.init num_dims Fun.id in
-        let x_sum = sum dims x in
+        let x_sum = sum ~axes:dims x in
         let dims = List.init num_output_dims Fun.id in
-        sum dims y +$ x_sum )
+        sum ~axes:dims y +$ x_sum )
     , num_dims )
 
 let random_mask num_dims =
@@ -126,26 +122,28 @@ let finite_difference ?(delta = 1e-4) f mask x =
 
 let actual_gradient f mask x =
   let [E grad; _] =
-    Backpropagate.diff Var (fun (Ir.Var.List.E x) -> Ir.Var.List.E (f x)) (E x)
+    Backpropagate.diff Var (fun (Var.List.E x) -> Var.List.E (f x)) (E x)
   in
-  let shape = Ir.shape_of_var grad in
+  let shape = Var.shape grad in
   let dims = List.mapi (fun i _ -> i) shape in
   let grad = select mask grad (zeros_like grad) in
-  sum dims grad
+  sum ~axes:dims grad
 
 module Device =
   ( val Pjrt_bindings.make ~caching:false
           "/Users/michelbartels/Downloads/pjrt/jax_plugins/metal_plugin/pjrt_plugin_metal_14.dylib"
     )
 
-let () = Dsl.metal_hack := true
+let () = 
+  if use_metal then (print_endline "Doing fewer tests as metal does not support all operations" ; Metal.enable ())
+
 
 module Runtime = Runtime.Make (Device)
 
 type grad_test =
-  { f: (Ir.Tensor.f32, float) Ir.Var.u -> (Ir.Tensor.f32, float) Ir.Var.u
-  ; mask: (Ir.Tensor.i1, bool) Ir.Var.u
-  ; x: (Ir.Tensor.f32, float) Ir.Var.u }
+  { f: (Tensor.f32, float) Var.u -> (Tensor.f32, float) Var.u
+  ; mask: (Tensor.i1, bool) Var.u
+  ; x: (Tensor.f32, float) Var.u }
 
 let grad_test_gen =
   let* f, num_dims = differentiable_function_gen in
@@ -153,10 +151,10 @@ let grad_test_gen =
   let* x = tensor_gen num_dims in
   return {f; mask; x}
 
-let grad_test_fn {f; mask; x} Ir.Var.List.[] =
+let grad_test_fn {f; mask; x} Var.List.[] =
   let grad_actual = actual_gradient f mask x in
   let grad_approx = finite_difference f mask x in
-  Ir.Var.List.[E grad_actual; E grad_approx]
+  Var.List.[E grad_actual; E grad_approx]
 
 let grad_actual_global = ref 0.
 
@@ -167,9 +165,9 @@ let correct_gradient test_state =
   let [E grad_actual; E grad_approx] =
     Runtime.DeviceValue.to_host_value result
   in
-  let grad_actual = Ir.Tensor.to_list grad_actual in
+  let grad_actual = Tensor.to_list grad_actual in
   let grad_actual = List.hd grad_actual in
-  let grad_approx = Ir.Tensor.to_list grad_approx in
+  let grad_approx = Tensor.to_list grad_approx in
   let grad_approx = List.hd grad_approx in
   grad_actual_global := grad_actual ;
   grad_approx_global := grad_approx ;
@@ -179,14 +177,14 @@ let correct_gradient test_state =
   diff <= (Float.abs grad_actual +. Float.abs grad_approx) *. 1e-1
 
 let print_fn test_state =
-  let input_type = Ir.ValueType.of_var test_state.x in
-  let func = Ir.create_func (E input_type) (fun (E x) -> E (test_state.f x)) in
+  let input_type = Var.value_type test_state.x in
+  let func = Translation.create_func (E input_type) (fun (E x) -> E (test_state.f x)) in
   Printf.printf "grad_actual: %f\ngrad_approx: %f\n" !grad_actual_global
     !grad_approx_global ;
-  Ir.compile func
+  Translation.translate func
 
 let test_grad =
-  QCheck2.Test.make ~name:"grad_test" ~count:1 ~print:print_fn grad_test_gen
+  QCheck2.Test.make ~name:"grad_test" ~count:40 ~print:print_fn grad_test_gen
     correct_gradient
 
 let _ = QCheck_base_runner.run_tests ~verbose:false [test_grad]

@@ -33,7 +33,7 @@ let elbo ?(only_kl = false) observation parametrised_distr =
   in
   let kl = List.fold_left ( +$ ) ~.0. !kls in
   return
-  @@ Ir.Var.List.E
+  @@ Var.List.E
        ( kl
        -$ Distribution.log_prob distribution observation
           *$. if only_kl then 0. else 1. )

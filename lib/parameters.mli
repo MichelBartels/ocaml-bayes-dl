@@ -8,16 +8,16 @@ val bind :
 val ( let* ) :
   ('a, 'b) t -> ('b -> ('c Hlist.hlist, 'd) t) -> (('a * 'c) Hlist.hlist, 'd) t
 
-val new_param : 'a Runtime.HostValue.t -> ('a, 'a Ir.Var.t) t
+val new_param : 'a Runtime.HostValue.t -> ('a, 'a Var.t) t
 
-val to_fun : ('a, 'b) t -> 'a Ir.Var.t -> 'b
+val to_fun : ('a, 'b) t -> 'a Var.t -> 'b
 
 val initial :
-  'a Ir.ValueType.t -> ('a Ir.Var.t -> ('b, 'c) t) -> 'b Runtime.HostValue.t
+  'a Value_type.t -> ('a Var.t -> ('b, 'c) t) -> 'b Runtime.HostValue.t
 
-val params_for : ('a, 'b) t -> ('a, 'a Ir.Var.t) t
+val params_for : ('a, 'b) t -> ('a, 'a Var.t) t
 
 val param_type :
-  'a Ir.ValueType.t -> ('a Ir.Var.t -> ('b, 'c) t) -> 'b Ir.ValueType.t
+  'a Value_type.t -> ('a Var.t -> ('b, 'c) t) -> 'b Value_type.t
 
 val flatten : (('a * unit) Hlist.hlist, 'b) t -> ('a, 'b) t

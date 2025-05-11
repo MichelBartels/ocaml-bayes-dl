@@ -8,39 +8,27 @@ module Device =
 module Runtime = Runtime.Make (Device)
 open Runtime
 
-let () = Dsl.metal_hack := true
-
-(*let random_normal Ir.Var.List.[] =
-  Ir.Var.List.E (Random.normal_f32 [4; 4])
-
-let random_normal =
-  compile [] random_normal
-
-let () =
-  let x = random_normal [] in
-  let (E x) = DeviceValue.to_host_value x in
-  print_endline (Ir.Tensor.to_string x)*)
+let () = Metal.enable ()
 
 let batch_size = 256
 
-let input_type = ([batch_size; 1; 784], Ir.Tensor.F32)
+let input_type = ([batch_size; 1; 784], Tensor.F32)
 
 let train_step =
   let param_type = Parameters.param_type (E input_type) Vae.train in
   compile [param_type; E input_type]
   @@ fun [params; x] -> Parameters.to_fun (Vae.train x) params
 
-(*let decode =
+let decode =
   let param_type = Parameters.param_type [] Vae.decode in
   compile param_type @@ fun params -> Parameters.to_fun (Vae.decode []) params
 
 let reconstruct =
-  let input_type = ([1; 1; 784], Ir.Tensor.F32) in
+  let input_type = ([1; 1; 784], Tensor.F32) in
   let [param_type] = Parameters.param_type (E input_type) Vae.reconstruct in
   compile [param_type; E input_type]
   @@ fun [params; x] -> Parameters.to_fun (Vae.reconstruct x) [params]
 
-*)
 
 let train_step set_msg params x =
   (* let x = DeviceValue.of_host_value @@ E x in *)
@@ -48,20 +36,19 @@ let train_step set_msg params x =
   let (E loss) = DeviceValue.to_host_value loss in
   set_msg
   @@ Printf.sprintf "Loss: %15.9f"
-       (List.hd @@ Ir.Tensor.to_list loss)
+       (List.hd @@ Tensor.to_list loss)
        ;
   params
 
 let num_steps = 25000
 
-(* let show_sample params () = *)
-(*   let Runtime.DeviceValue.(inference_params :: _) = params in *)
-(*   let Runtime.DeviceValue.[_; decoder_params] = inference_params in *)
-(*   let y = decode ~collect:false [decoder_params] in *)
-(*   let (E y) = DeviceValue.to_host_value y in *)
-(*   Mnist.plot y *)
+let show_sample params () =
+  let Runtime.DeviceValue.(inference_params :: _) = params in
+  let Runtime.DeviceValue.[_; decoder_params] = inference_params in
+  let y = decode ~collect:false [decoder_params] in
+  let (E y) = DeviceValue.to_host_value y in
+  Mnist.plot y
 
-(*
 let save_samples params x i =
   let Runtime.DeviceValue.(inference_params :: _) = params in
   let Runtime.DeviceValue.[_; decoder_params] = inference_params in
@@ -71,7 +58,7 @@ let save_samples params x i =
   Mnist.save y (Printf.sprintf "samples/sample_%d.png" i) ;
   let y = reconstruct ~collect:false [inference_params; x] in
   let (E y) = DeviceValue.to_host_value y in
-  Mnist.save y (Printf.sprintf "samples/recon_%d.png" i) *)
+  Mnist.save y (Printf.sprintf "samples/recon_%d.png" i)
 
 let prepare_dataset dataset_type batch_size =
   let dataset = Mnist.load_images dataset_type in
@@ -92,19 +79,16 @@ let train () =
   let rec loop i params train_set sample_set =
     match (Seq.uncons train_set, Seq.uncons sample_set) with
     | Some (batch, train_set), Some (sample, sample_set) ->
-        (*if i mod 1000 = 0 then save_samples params sample i ;*)
-          let _ = sample in
+        if i mod 1000 = 0 then save_samples params sample i ;
         loop (i + 1) (train_step params batch) train_set sample_set
     | _ ->
         params
   in
   loop 0 params generator sample_dataset
 
-let _ = train ()
-
-(* let _ = *)
-(*   let params = train () in *)
-(*   let _ = (params, show_sample) in *)
-(*   while true do *)
-(*     () (\* show_sample params () *\) *)
-(*   done *)
+let _ =
+  let params = train () in
+  let _ = (params, show_sample) in
+  while true do
+    show_sample params ()
+  done

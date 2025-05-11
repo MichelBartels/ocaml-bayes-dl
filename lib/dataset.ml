@@ -15,7 +15,7 @@ let batch f n t =
         f batch )
   ; length= m }
 
-let batch_tensors n = batch Ir.Tensor.concatenate n
+let batch_tensors n = batch Tensor.concatenate n
 
 let map f t = {get= (fun i -> f (t.get i)); length= t.length}
 

@@ -23,7 +23,7 @@ let random_u64_to_f32 x =
 let key = scalar_u64 "0xc8e4fd154ce32f6d"
 
 type _ Effect.t +=
-  | Counter : int -> (Ir.Tensor.u64, Unsigned.uint64) Ir.Var.u Effect.t
+  | Counter : int -> (Tensor.u64, Unsigned.uint64) Var.u Effect.t
 
 let uniform_f32 ?(key = key) shape =
   let total_size = List.fold_left ( * ) 1 shape in
@@ -106,7 +106,7 @@ let normal_f32 ?(key = key) shape =
 
 let current_seed () = Effect.perform (Counter 0)
 
-let handler f (ctr : (Ir.Tensor.u64, Unsigned.uint64) Ir.Var.u) =
+let handler f (ctr : (Tensor.u64, Unsigned.uint64) Var.u) =
   let open Effect.Deep in
   let ctr_ref = ref ctr in
   try_with f ()
@@ -122,6 +122,6 @@ let handler f (ctr : (Ir.Tensor.u64, Unsigned.uint64) Ir.Var.u) =
           | _ ->
               None ) }
 
-let seed_type = ([], Ir.Tensor.U64)
+let seed_type = ([], Tensor.U64)
 
 let initial_seed = scalar_u64 "0"
