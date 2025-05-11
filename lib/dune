@@ -9,4 +9,10 @@
   pjrt_bindings
   graphics
   domainslib
-  stb_image_write))
+  stb_image_write)
+  (preprocess
+  (pps ppx_inline_test ppx_expect))
+  (inline_tests)
+ (instrumentation (backend bisect_ppx))
+
+  )

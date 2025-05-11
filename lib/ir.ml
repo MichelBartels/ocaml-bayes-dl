@@ -106,6 +106,7 @@ module rec Var : sig
     | Concatenate : ('a, 'b) u list * int -> ('a, 'b) u
     | Select : (Tensor.i1, bool) u * ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Sqrt : ('a, 'b) u -> ('a, 'b) u
+    | OptimizationBarrier : ('a, 'b) u -> ('a, 'b) u
 
   type any = Any : ('a, 'b) u -> any
 
@@ -134,6 +135,8 @@ module rec Var : sig
   type map_fn = {f: 'a 'b. ('a, 'b) u -> ('a, 'b) u}
 
   val map : map_fn -> 'a t -> 'a t
+
+  val to_string : ('a, 'b) u -> string
 end = struct
   type (_, _) u =
     | Add : ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
@@ -188,6 +191,7 @@ end = struct
     | Concatenate : ('a, 'b) u list * int -> ('a, 'b) u
     | Select : (Tensor.i1, bool) u * ('a, 'b) u * ('a, 'b) u -> ('a, 'b) u
     | Sqrt : ('a, 'b) u -> ('a, 'b) u
+    | OptimizationBarrier : ('a, 'b) u -> ('a, 'b) u
 
   module VarList : Hlist.S with type ('a, 'b) u = ('a, 'b) u =
   Hlist.Make (struct
@@ -245,6 +249,63 @@ end = struct
   type map_fn = {f: 'a 'b. ('a, 'b) u -> ('a, 'b) u}
 
   let map ({f} : map_fn) a = map2 {f= (fun a _ -> f a)} a a
+
+  let rec to_string : type a b. (a, b) u -> string = function
+    | Add (lhs, rhs) -> Printf.sprintf "(%s + %s)" (to_string lhs) (to_string rhs)
+    | Subtract (lhs, rhs) -> Printf.sprintf "(%s - %s)" (to_string lhs) (to_string rhs)
+    | Multiply (lhs, rhs) -> Printf.sprintf "(%s * %s)" (to_string lhs) (to_string rhs)
+    | Divide (lhs, rhs) -> Printf.sprintf "(%s / %s)" (to_string lhs) (to_string rhs)
+    | Negate var -> Printf.sprintf "(-%s)" (to_string var)
+    | Abs var -> Printf.sprintf "|%s|" (to_string var)
+    | Ln var -> Printf.sprintf "ln(%s)" (to_string var)
+    | Ln_1_plus var -> Printf.sprintf "ln(1 + %s)" (to_string var)
+    | Exponential var -> Printf.sprintf "exp(%s)" (to_string var)
+    | Pow (lhs, rhs) -> Printf.sprintf "(%s ^ %s)" (to_string lhs) (to_string rhs)
+    | Argument (id, _) -> Printf.sprintf "arg%d" id
+    | Compare (lhs, direction, rhs) ->
+        let op = match direction with
+          | Eq -> "=="
+          | Ne -> "!="
+          | Ge -> ">="
+          | Gt -> ">"
+          | Le -> "<="
+          | Lt -> "<"
+        in
+        Printf.sprintf "(%s %s %s)" (to_string lhs) op (to_string rhs)
+    | Min (lhs, rhs) -> Printf.sprintf "min(%s, %s)" (to_string lhs) (to_string rhs)
+    | Max (lhs, rhs) -> Printf.sprintf "max(%s, %s)" (to_string lhs) (to_string rhs)
+    | Constant tensor -> Printf.sprintf "const(%s)" (Tensor.to_string tensor)
+    | BroadcastScalarConstant (value_type, scalar) -> Printf.sprintf "const(%s)" (Tensor.value_to_string (snd value_type) scalar)
+    | DotProduct (lhs, rhs, _, _, _, _) -> Printf.sprintf "dot(%s, %s)" (to_string lhs) (to_string rhs)
+    | Random (_, a, b, shape, dist) ->
+        let dist_str = match dist with Uniform -> "uniform" | Normal -> "normal" in
+        Printf.sprintf "random(%s, %s, %s, %s)" (to_string a) (to_string b) (to_string shape) dist_str
+    | DiffVar (id, var) -> Printf.sprintf "diff%d(%s)" id (to_string var)
+    | BroadcastInDim (var, dims) -> Printf.sprintf "broadcast(%s, %s)" (to_string var) (String.concat "," (List.map string_of_int dims))
+    | Transpose (var, perm) -> Printf.sprintf "transpose(%s, %s)" (to_string var) (String.concat "," (List.map string_of_int perm))
+    | Tanh var -> Printf.sprintf "tanh(%s)" (to_string var)
+    | Sum (var, dims) -> Printf.sprintf "sum(%s, %s)" (to_string var) (String.concat "," (List.map string_of_int dims))
+    | RightShift (lhs, rhs) -> Printf.sprintf "(%s >> %s)" (to_string lhs) (to_string rhs)
+    | LeftShift (lhs, rhs) -> Printf.sprintf "(%s << %s)" (to_string lhs) (to_string rhs)
+    | Bitcast (var, _) -> Printf.sprintf "bitcast(%s)" (to_string var)
+    | Convert (var, _) -> Printf.sprintf "convert(%s)" (to_string var)
+    | NoGrad var -> Printf.sprintf "nograd(%s)" (to_string var)
+    | Or (lhs, rhs) -> Printf.sprintf "(%s | %s)" (to_string lhs) (to_string rhs)
+    | Iota (index, shape) -> Printf.sprintf "iota(%d, %s)" index (String.concat "," (List.map string_of_int shape))
+    | Reshape (var, shape) -> Printf.sprintf "reshape(%s, %s)" (to_string var) (String.concat "," (List.map string_of_int shape))
+    | Sin var -> Printf.sprintf "sin(%s)" (to_string var)
+    | Cos var -> Printf.sprintf "cos(%s)" (to_string var)
+    | Concatenate (vars, axis) -> 
+        Printf.sprintf "concat([%s], %d)" 
+          (String.concat "; " (List.map to_string vars)) 
+          axis
+    | Select (cond, lhs, rhs) -> 
+        Printf.sprintf "select(%s, %s, %s)" 
+          (to_string cond) 
+          (to_string lhs) 
+          (to_string rhs)
+    | Sqrt var -> Printf.sprintf "sqrt(%s)" (to_string var)
+    | OptimizationBarrier var -> Printf.sprintf "barrier(%s)" (to_string var)
 
   module List = VarList
 end
@@ -423,6 +484,8 @@ end = struct
         of_var lhs
     | Sqrt var ->
         of_var var
+    | OptimizationBarrier var ->
+        of_var var
 
   let of_vars l =
     let open Hlist.Map (Var.List) (ValueTypeList) in
@@ -497,7 +560,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.add"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Subtract (lhs, rhs) ->
@@ -511,7 +575,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.subtract"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Multiply (lhs, rhs) ->
@@ -525,7 +590,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.multiply"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Divide (lhs, rhs) ->
@@ -539,7 +605,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.divide"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Negate var' ->
@@ -552,7 +619,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.negate"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Abs var' ->
@@ -565,7 +633,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.abs"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Ln var' ->
@@ -578,7 +647,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.log"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Ln_1_plus var' ->
@@ -591,7 +661,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.log_plus_one"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Exponential var' ->
@@ -604,7 +675,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.exponential"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Pow (lhs, rhs) ->
@@ -618,7 +690,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.power"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Argument _ ->
@@ -634,7 +707,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.compare"
               ; attributes= [attribute_of_comparison_direction direction]
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Min (lhs, rhs) ->
@@ -648,7 +722,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.minimum"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Max (lhs, rhs) ->
@@ -662,7 +737,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.maximum"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Constant tensor ->
@@ -680,7 +756,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.constant"
               ; attributes= [("value", repr)]
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | BroadcastScalarConstant (value_type, scalar) ->
@@ -698,7 +775,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.constant"
               ; attributes= [("value", repr)]
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | DotProduct
@@ -731,7 +809,8 @@ let vars_to_ops vars =
                       ^ dims_to_string rhs_contracting_dims
                       ^ "\n>" ) ]
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Random (_, a, b, shape, distribution) ->
@@ -754,7 +833,8 @@ let vars_to_ops vars =
                             "NORMAL" )
                       ^ ">" ) ]
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | DiffVar (_, var) ->
@@ -780,7 +860,8 @@ let vars_to_ops vars =
                                  string_of_int (i + List.length new_dims) ) )
                         ^ ">" ) ]
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Transpose (var', permutation) ->
@@ -803,7 +884,8 @@ let vars_to_ops vars =
                         ^ String.concat "," (List.map string_of_int permutation)
                         ^ ">" ) ]
                 ; anonymous_functions= []
-                ; call= false }
+                ; call= false
+                ; reduce_info= None }
             in
             (output :: prev_outputs, add var (Some op, output) cache)
       | Tanh var' ->
@@ -816,7 +898,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.tanh"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Sum (var', dimensions) ->
@@ -830,31 +913,10 @@ let vars_to_ops vars =
               { inputs= var' @ initial
               ; outputs= [output]
               ; name= "stablehlo.reduce"
-              ; attributes=
-                  [ ( "dimensions"
-                    , "array<i64: "
-                      ^ String.concat "," (List.map string_of_int dimensions)
-                      ^ ">" ) ]
-              ; anonymous_functions=
-                  (let scalar_type = Tensor_type ([], F32) in
-                   [ Stable_hlo.
-                       { id= "sum"
-                       ; inputs= [("x", scalar_type); ("y", scalar_type)]
-                       ; outputs= [scalar_type]
-                       ; body=
-                           [ { inputs= [("x", scalar_type); ("y", scalar_type)]
-                             ; outputs= [("z", scalar_type)]
-                             ; name= "stablehlo.add"
-                             ; attributes= []
-                             ; anonymous_functions= []
-                             ; call= false }
-                           ; { inputs= [("z", scalar_type)]
-                             ; outputs= []
-                             ; name= "stablehlo.return"
-                             ; attributes= []
-                             ; anonymous_functions= []
-                             ; call= false } ] } ] )
-              ; call= false }
+              ; attributes= [("dimensions", "[" ^ String.concat ", " (List.map string_of_int dimensions) ^ "]")]
+              ; anonymous_functions= []
+              ; call= false
+              ; reduce_info= Some "stablehlo.add" }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | RightShift (lhs, rhs) ->
@@ -868,7 +930,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.shift_right_logical"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | LeftShift (lhs, rhs) ->
@@ -882,7 +945,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.shift_left"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Bitcast (var', new_type) ->
@@ -898,7 +962,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.bitcast_convert"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Convert (var', new_type) ->
@@ -914,7 +979,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.convert"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | NoGrad var' ->
@@ -930,7 +996,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.or"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Iota (index, _) ->
@@ -942,7 +1009,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.iota"
               ; attributes= [("iota_dimension", string_of_int index ^ " : i64")]
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Reshape (var', _) ->
@@ -955,7 +1023,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.reshape"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Sin var' ->
@@ -968,7 +1037,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.sine"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Cos var' ->
@@ -981,7 +1051,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.cosine"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Concatenate (vars, axis) ->
@@ -1000,7 +1071,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.concatenate"
               ; attributes= [("dimension", string_of_int axis)]
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Select (condition, lhs, rhs) ->
@@ -1015,7 +1087,8 @@ let vars_to_ops vars =
               ; name= "stablehlo.select"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
       | Sqrt var' ->
@@ -1028,7 +1101,22 @@ let vars_to_ops vars =
               ; name= "stablehlo.sqrt"
               ; attributes= []
               ; anonymous_functions= []
-              ; call= false }
+              ; call= false
+              ; reduce_info= None }
+          in
+          (output :: prev_outputs, add var (Some op, output) cache)
+      | OptimizationBarrier var' ->
+          let var', cache = aux ([], cache) var' in
+          let output = Var.to_annotated_value var in
+          let op =
+            Stable_hlo.
+              { inputs= var'
+              ; outputs= [output]
+              ; name= "stablehlo.optimization_barrier"
+              ; attributes= []
+              ; anonymous_functions= []
+              ; call= false
+              ; reduce_info= None }
           in
           (output :: prev_outputs, add var (Some op, output) cache)
   in
@@ -1039,10 +1127,11 @@ let annotated_values_to_return_op values =
   Stable_hlo.
     { inputs= values
     ; outputs= []
-    ; name= "stablehlo.return"
+    ; name= "func.return"
     ; attributes= []
     ; anonymous_functions= []
-    ; call= false }
+    ; call= false
+    ; reduce_info= None }
 
 let create_func : type a b.
     a ValueType.t -> (a Var.t -> b Var.t) -> (a, b) Func.t =
@@ -1067,102 +1156,4 @@ let func_to_stable_hlo (func : ('a, 'b) Func.t) =
 module StringMap = Map.Make (String)
 
 let compile entry =
-  (* let rec all_funcs : *)
-  (*     type a. string StringMap.t -> a Var.t -> string StringMap.t = *)
-  (*  fun cache var -> *)
-  (*   match var with *)
-  (*   | Var.Add (a, b) -> *)
-  (*       print_endline "Add" ; *)
-  (*       all_funcs (all_funcs cache a) b *)
-  (*   | Subtract (a, b) -> *)
-  (*       print_endline "Subtract" ; *)
-  (*       all_funcs (all_funcs cache a) b *)
-  (*   | Multiply (a, b) -> *)
-  (*       print_endline "Multiply" ; *)
-  (*       all_funcs (all_funcs cache a) b *)
-  (*   | Divide (a, b) -> *)
-  (*       print_endline "Divide" ; *)
-  (*       all_funcs (all_funcs cache a) b *)
-  (*   | Abs a -> *)
-  (*       print_endline "Abs" ; all_funcs cache a *)
-  (*   | Ln a -> *)
-  (*       print_endline "Ln" ; all_funcs cache a *)
-  (*   | Exponential a -> *)
-  (*       print_endline "Exponential" ; *)
-  (*       all_funcs cache a *)
-  (*   | Pow (a, b) -> *)
-  (*       print_endline "Pow" ; *)
-  (*       all_funcs (all_funcs cache a) b *)
-  (*   | Argument _ -> *)
-  (*       print_endline "Argument" ; cache *)
-  (*   | Compare (a, _, b) -> *)
-  (*       print_endline "Compare" ; *)
-  (*       all_funcs (all_funcs cache a) b *)
-  (*   | Min (a, b) -> *)
-  (*       print_endline "Min" ; *)
-  (*       all_funcs (all_funcs cache a) b *)
-  (*   | Max (a, b) -> *)
-  (*       print_endline "Max" ; *)
-  (*       all_funcs (all_funcs cache a) b *)
-  (*   | Constant _ -> *)
-  (*       print_endline "Constant" ; cache *)
-  (*   | DotProduct (a, b, _, _, _, _) -> *)
-  (*       print_endline "DotProduct" ; *)
-  (*       all_funcs (all_funcs cache a) b *)
-  (*   | Random (_, a, b, c, _) -> *)
-  (*       print_endline "Random" ; *)
-  (*       all_funcs (all_funcs (all_funcs cache a) b) c *)
-  (*   | [] -> *)
-  (*       print_endline "Empty" ; cache *)
-  (*   | x :: xs -> *)
-  (*       print_endline "List" ; *)
-  (*       let l = Var.to_var_list (x :: xs) in *)
-  (*       VarList.fold_left {f= all_funcs} cache l *)
-  (*   | DiffVar (_, var) -> *)
-  (*       print_endline "DiffVar" ; all_funcs cache var *)
-  (*   | DiffConst var -> *)
-  (*       print_endline "DiffConst" ; all_funcs cache var *)
-  (*   | BroadcastInDim (var, _) -> *)
-  (*       print_endline "BroadcastInDim" ; *)
-  (*       all_funcs cache var *)
-  (*   | Transpose (var, _) -> *)
-  (*       print_endline "Transpose" ; all_funcs cache var *)
-  (*   | Tanh var -> *)
-  (*       print_endline "Tanh" ; all_funcs cache var *)
-  (*   | Sum (var, _) -> *)
-  (*       print_endline "Sum" ; all_funcs cache var *)
-  (*   | RightShift (a, b) -> *)
-  (*       print_endline "RightShift" ; *)
-  (*       all_funcs (all_funcs cache a) b *)
-  (*   | LeftShift (a, b) -> *)
-  (*       print_endline "LeftShift" ; *)
-  (*       all_funcs (all_funcs cache a) b *)
-  (*   | Bitcast (a, _) -> *)
-  (*       print_endline "Bitcast" ; all_funcs cache a *)
-  (*   | Convert (a, _) -> *)
-  (*       print_endline "Convert" ; all_funcs cache a *)
-  (*   | NoGrad var -> *)
-  (*       print_endline "NoGrad" ; all_funcs cache var *)
-  (*   | Or (a, b) -> *)
-  (*       print_endline "Or" ; *)
-  (*       all_funcs (all_funcs cache a) b *)
-  (*   | Iota _ -> *)
-  (*       print_endline "Iota" ; cache *)
-  (*   | Reshape (a, _) -> *)
-  (*       print_endline "Reshape" ; all_funcs cache a *)
-  (*   | Sin a -> *)
-  (*       print_endline "Sin" ; all_funcs cache a *)
-  (*   | Cos a -> *)
-  (*       print_endline "Cos" ; all_funcs cache a *)
-  (*   | Concatenate (vars, _) -> *)
-  (*       print_endline "Concatenate" ; *)
-  (*       List.fold_left (fun acc var -> all_funcs acc var) cache vars *)
-  (* in *)
   Stable_hlo.func_to_string @@ func_to_stable_hlo entry
-(* let main = func_to_stable_hlo entry |> Stable_hlo.func_to_string in *)
-(* print_endline "Generated hlo" ; *)
-(* let cache = StringMap.add entry.Func.name main StringMap.empty in *)
-(* print_endline "Added main to cache" ; *)
-(* let funcs = all_funcs cache entry.Func.outputs in *)
-(* print_endline "Got all funcs" ; *)
-(* StringMap.bindings funcs |> List.map snd |> String.concat "\n" *)

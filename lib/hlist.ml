@@ -7,7 +7,7 @@ module type S = sig
 
   type _ t =
     | [] : unit hlist t
-    | ( :: ) : 'a t * 'b hlist t -> ('a -> 'b) hlist t
+    | ( :: ) : 'a t * 'b hlist t -> ('a * 'b) hlist t
     | E : ('a, 'b) u -> ('a, 'b) element t
 
   val length : 'a hlist t -> int
@@ -53,7 +53,7 @@ end) : S with type ('a, 'b) u = ('a, 'b) T.t = struct
 
   type _ t =
     | [] : unit hlist t
-    | ( :: ) : 'a t * 'b hlist t -> ('a -> 'b) hlist t
+    | ( :: ) : 'a t * 'b hlist t -> ('a * 'b) hlist t
     | E : ('a, 'b) u -> ('a, 'b) element t
 
   let rec length : type a. a hlist t -> int = function

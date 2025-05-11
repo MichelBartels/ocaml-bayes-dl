@@ -19,22 +19,24 @@ let elbo ?(only_kl = false) observation parametrised_distr =
                 Some
                   (fun (k : (a, _) continuation) ->
                     let sample = Distribution.sample guide batch_size in
-                    let kl = Distribution.kl guide prior in
-                    (* let kl = *)
-                    (*   Distribution.log_prob ?batch_size prior sample *)
-                    (*   -@ Distribution.log_prob ?batch_size guide sample *)
-                    (* in *)
+                    let kl = match Distribution.kl guide prior with
+                      | Some kl -> kl
+                      | None ->
+                        let log_prob_guide = Distribution.log_prob ?batch_size guide sample in
+                        let log_prob_prior = Distribution.log_prob ?batch_size prior sample in
+                        log_prob_guide -$ log_prob_prior
+                    in
                     kls := kl :: !kls ;
                     continue k sample )
             | _ ->
                 None ) }
   in
-  let kl = List.fold_left ( +@ ) ~.0. !kls in
+  let kl = List.fold_left ( +$ ) ~.0. !kls in
   return
   @@ Ir.Var.List.E
        ( kl
-       -@ Distribution.log_prob distribution observation
-          *.> if only_kl then 0. else 1. )
+       -$ Distribution.log_prob distribution observation
+          *$. if only_kl then 0. else 1. )
 
 let inference parametrised =
   let open Parameters in

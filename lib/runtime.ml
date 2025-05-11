@@ -149,26 +149,34 @@ module Make (Device : Device_api.S) = struct
     cache_folder ^ "/" ^ hash
 
   let compile input_type f =
-    let input_type = Ir.ValueType.List.[input_type; E ([], Ir.Tensor.U64)] in
+    let input_type = Ir.ValueType.List.[input_type; E ([], F32)] in
     let func =
       Ir.create_func input_type (fun [x; E seed] ->
+              let seed = Dsl.convert U64 seed in
           Random.handler
             (fun () ->
               let y = f x in
-              Ir.Var.List.[y; E (Random.current_seed ())] )
+              let seed = Dsl.convert F32 (Random.current_seed ()) in
+              Ir.Var.List.[y; E seed] )
             seed )
     in
     let output_type = Ir.ValueType.of_vars func.outputs in
     let func_str = Ir.compile func in
+    (*let func_str = {|
+    func.func @main(%1 : tensor<f32>) -> (tensor<f32>) {
+%2 = "stablehlo.convert"(%1) : (tensor<f32>) -> (tensor<ui64>)
+%3 = "stablehlo.optimization_barrier"(%2) : (tensor<ui64>) -> (tensor<ui64>)
+%4 = "stablehlo.multiply"(%2, %3) : (tensor<ui64>, tensor<ui64>) -> (tensor<ui64>)
+%5 = "stablehlo.convert"(%4) : (tensor<ui64>) -> (tensor<f32>)
+"func.return"(%5) : (tensor<f32>) -> ()
+}
+    |} in*)
     let model_path = model_path func_str in
-    let program =
-      if Sys.file_exists model_path then Device.load ~path:model_path
-      else Device.compile_and_store ~program:func_str ~path:model_path
-    in
+    let program = Device.compile ~path:model_path func_str in
     let func = Function.make program input_type output_type in
     let seed =
       ref @@ DeviceValue.of_host_value
-      @@ HostValue.E (Ir.Tensor.scalar U64 @@ Unsigned.UInt64.of_int 0)
+      @@ HostValue.E (Ir.Tensor.scalar F32 0.0)
     in
     fun ?collect inputs ->
       let [y; seed'] = Function.call func ?collect [inputs; !seed] in

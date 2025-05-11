@@ -1,6 +1,6 @@
 open Dsl
 
-let sigmoid x = 1. /.< (1. +.< exp (-1. *.< x))
+let sigmoid x = 1.0 /.$ (1.0 +.$ exp (~-.1.0 *.$ x))
 
 let bayesian_parameter batch_size shape std_prior =
   let open Parameters in
@@ -10,7 +10,7 @@ let bayesian_parameter batch_size shape std_prior =
   in
   return
   @@ Svi.sample
-       ~prior:(Normal (zeros_like mean, ones_like mean *.> std_prior))
+       ~prior:(Normal (zeros_like mean, ones_like mean *$. std_prior))
        ~guide:(Normal (mean, exp log_std))
        ~batch_size ()
 
@@ -20,7 +20,7 @@ let dense_bayesian ?(activation = tanh) in_dims out_dims x =
   let batch_size = List.hd shape in
   let* w = bayesian_parameter batch_size [in_dims; out_dims] 0.01 in
   let* b = bayesian_parameter batch_size [1; out_dims] 0.01 in
-  return @@ activation (matmul x w +@ b)
+  return @@ activation (matmul x w +$ b)
 
 let normal mean std =
   let u_1 = Stdlib.Random.float 1. in
@@ -41,7 +41,7 @@ let dense ?(activation = tanh) in_dims out_dims x =
   let* (E w) = new_param (E (normal_tensor 0. 0.01 [in_dims; out_dims])) in
   let* (E b) = new_param (E (normal_tensor 0. 0.01 [1; out_dims])) in
   let b = Ir.Var.BroadcastInDim (b, [batch_size]) in
-  return @@ activation (matmul x w +@ b)
+  return @@ activation (matmul x w +$ b)
 
 let embedding_dim = 16
 
@@ -56,7 +56,7 @@ let decoder z =
   let open Parameters in
   let* z = dense_bayesian embedding_dim 512 z in
   let* z = dense_bayesian ~activation:Fun.id 512 784 z in
-  return @@ sigmoid (z *.> 100.)
+  return @@ sigmoid (z *$. 100.0)
 
 let vae x =
   let open Parameters in
@@ -68,7 +68,7 @@ let vae x =
       ()
   in
   let* x' = decoder z in
-  return @@ Distribution.Normal (x', ones_like x' *.> 0.01)
+  return @@ Distribution.Normal (x', ones_like x' *$. 0.01)
 
 let optim = Optim.adamw ~lr:1e-3
 

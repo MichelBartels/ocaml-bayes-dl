@@ -35,7 +35,8 @@ type op =
   ; name: string
   ; attributes: (string * string) list
   ; anonymous_functions: func list
-  ; call: bool }
+  ; call: bool
+  ; reduce_info: string option }
 
 and func =
   { id: string
@@ -78,8 +79,21 @@ let rec op_to_string (op : op) =
   in
   let signature = "(" ^ input_types ^ ") -> " ^ output_types ^ "" in
   let call = if op.call then "call @" ^ op.name else "\"" ^ op.name ^ "\"" in
-  outputs ^ call ^ "(" ^ inputs ^ ")" ^ anonymous_functions ^ attributes ^ " : "
-  ^ signature
+  match op.reduce_info with
+  | Some op_name ->
+      let data_input, _ = List.hd op.inputs in
+      let init_input, _ = List.nth op.inputs 1 in
+      let dims = List.assoc "dimensions" op.attributes in
+      outputs
+      ^ "stablehlo.reduce(%"
+      ^ data_input
+      ^ " init: %"
+      ^ init_input
+      ^ ") applies "
+      ^ op_name
+      ^ " across dimensions = " ^ dims ^ " : " ^ signature
+  | None ->
+      outputs ^ call ^ "(" ^ inputs ^ ")" ^ anonymous_functions ^ attributes ^ " : " ^ signature
 
 and func_to_anonymous_string func =
   let inputs =

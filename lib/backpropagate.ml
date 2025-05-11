@@ -2,13 +2,13 @@ open Dsl
 
 (* (input_type, old_output_type, list end, output list) *)
 type (_, _, _, _) input =
-  | Var : ('a, 'b, 'c, 'a -> 'c) input
+  | Var : ('a, 'b, 'c, 'a * 'c) input
   | Const : ('a, 'b, 'c, 'c) input
-  | [] : (unit Hlist.hlist, 'a, 'b, unit Hlist.hlist -> 'b) input
+  | [] : (unit Hlist.hlist, 'a, 'b, unit Hlist.hlist * 'b) input
   | ( :: ) :
       ('a, 'b, 'c, 'd) input
-      * ('e Hlist.hlist, 'b, 'f, 'c Hlist.hlist -> 'f) input
-      -> (('a -> 'e) Hlist.hlist, 'b, 'f, 'd Hlist.hlist -> 'f) input
+      * ('e Hlist.hlist, 'b, 'f, 'c Hlist.hlist * 'f) input
+      -> (('a * 'e) Hlist.hlist, 'b, 'f, 'd Hlist.hlist * 'f) input
 
 module VarSet = Set.Make (struct
   type t = Var.any
@@ -47,7 +47,8 @@ let topological_order : type a b. (a, b) Var.u -> Var.any list =
       | Sin x
       | Cos x
       | Tanh x
-      | Sqrt x ->
+      | Sqrt x
+      | OptimizationBarrier x ->
           let visited, order = loop visited order x in
           let var = Var.Any var in
           (visited, var :: order)
@@ -125,7 +126,7 @@ module GradMap = struct
             Some (Var.Any grad)
         | Some (Var.Any grad') ->
             let grad' = assert_same_type' grad' grad in
-            Some (Any (grad +@ grad')) )
+            Some (Any (grad +$ grad')) )
       map
 
   let get : type a b. t -> (a, b) Var.u -> (a, b) Var.u option =
@@ -139,7 +140,7 @@ module GradMap = struct
 end
 
 let diff : type a b c d.
-       (a, (b, d) Hlist.element, (b, d) Hlist.element -> unit, c) input
+       (a, (b, d) Hlist.element, (b, d) Hlist.element * unit, c) input
     -> (a Ir.Var.t -> (b, d) Hlist.element Ir.Var.t)
     -> a Ir.Var.t
     -> c Hlist.hlist Ir.Var.t =
@@ -179,23 +180,23 @@ let diff : type a b c d.
           GradMap.add grads v2 grad
       | Subtract (v1, v2) ->
           let grads = GradMap.add grads v1 grad in
-          GradMap.add grads v2 ~-@grad
+          GradMap.add grads v2 ~-$grad
       | Multiply (v1, v2) ->
-          let grads = GradMap.add grads v1 (grad *@ v2) in
-          GradMap.add grads v2 (grad *@ v1)
+          let grads = GradMap.add grads v1 (grad *$ v2) in
+          GradMap.add grads v2 (grad *$ v1)
       | Negate v ->
-          GradMap.add grads v ~-@grad
+          GradMap.add grads v ~-$grad
       | Abs _ ->
           failwith "abs not yet implemented"
       | Ln v ->
-          GradMap.add grads v (grad /@ v)
+          GradMap.add grads v (grad /$ v)
       | Ln_1_plus v ->
-          GradMap.add grads v (grad /@ (v +@ ones_like v))
+          GradMap.add grads v (grad /$ (v +$ ones_like v))
       | Exponential v ->
-          GradMap.add grads v (grad *@ Exponential v)
+          GradMap.add grads v (grad *$ exp v)
       | Pow (v1, v2) ->
-          let grads = GradMap.add grads v1 (grad *@ var *@ v2 /@ v1) in
-          GradMap.add grads v2 (grad *@ ln v1 *@ var)
+          let grads = GradMap.add grads v1 (grad *$ var *$ v2 /$ v1) in
+          GradMap.add grads v2 (grad *$ ln v1 *$ var)
       | Argument _
       | Compare _
       | Min _
@@ -294,8 +295,8 @@ let diff : type a b c d.
             (backprop_dot false rhs rhs_contracting_dims rhs_batching_dims lhs
                lhs_contracting_dims lhs_batching_dims )
       | Divide (v1, v2) ->
-          let grads = GradMap.add grads v1 (grad /@ v2) in
-          GradMap.add grads v2 (grad *@ ~-@v1 /@ (v2 *@ v2))
+          let grads = GradMap.add grads v1 (grad /$ v2) in
+          GradMap.add grads v2 (grad *$ ~-$v1 /$ (v2 *$ v2))
       | BroadcastInDim (var, dims) -> (
         match Ir.ValueType.of_var var with
         | _, Ir.Tensor.F32 ->
@@ -312,7 +313,7 @@ let diff : type a b c d.
           GradMap.add grads var grad
       | Tanh var ->
           GradMap.add grads var
-            (grad *@ (Dsl.ones_like var -@ (tanh var *@ tanh var)))
+            (grad *$ (Dsl.ones_like var -$ (tanh var *$ tanh var)))
           (* Jax uses different backpropagation that is more numerically precise, but also slower *)
       | Sum (var, dimensions) ->
           let var_shape = Ir.shape_of_var var in
@@ -344,9 +345,9 @@ let diff : type a b c d.
           let grad = reshape (Ir.shape_of_var var) grad in
           GradMap.add grads var grad
       | Sin var ->
-          GradMap.add grads var (grad *@ cos var)
+          GradMap.add grads var (grad *$ cos var)
       | Cos var ->
-          GradMap.add grads var (grad *@ ~-@(sin var))
+          GradMap.add grads var (grad *$ ~-$(sin var))
       | Concatenate _ ->
           failwith "backpropagation of concatenate not implemented"
       | Select (cond, x, y) ->
@@ -357,7 +358,9 @@ let diff : type a b c d.
           GradMap.add grads y y_grad
       | Sqrt var ->
           GradMap.add grads var
-            (grad /@ ((ones_like var +@ ones_like var) *@ sqrt var)) )
+            (grad /$ ((ones_like var +$ ones_like var) *$ sqrt var))
+      | OptimizationBarrier var ->
+          GradMap.add grads var grad )
   in
   let initial_grads = GradMap.add GradMap.empty output (ones_like output) in
   let grads =
@@ -402,3 +405,99 @@ let diff : type a b c d.
   iter_vars l inputs (E output) [E output]
 
 let grad_and_value f = diff Var f
+
+let%expect_test "backprop_add" =
+  let x = full F32 1.0 [2; 2] in
+  let y = full F32 2.0 [2; 2] in
+  let [E grad; _] = diff Var (fun (E x) -> E (x +$ y)) (E x) in
+  print_endline (Ir.Var.to_string grad);
+  [%expect {| const(1.000000e+00) |}]
+
+let%expect_test "backprop_subtract" =
+  let x = full F32 1.0 [2; 2] in
+  let y = full F32 2.0 [2; 2] in
+  let [E grad; _] = diff Var (fun (E x) -> E (x -$ y)) (E x) in
+  print_endline (Ir.Var.to_string grad);
+  [%expect {| const(1.000000e+00) |}]
+
+let%expect_test "backprop_multiply" =
+  let x = full F32 2.0 [2; 2] in
+  let y = full F32 3.0 [2; 2] in
+  let [E grad; _] = diff Var (fun (E x) -> E (x *$ y)) (E x) in
+  print_endline (Ir.Var.to_string grad);
+  [%expect {| (const(1.000000e+00) * const(3.000000e+00)) |}]
+
+let%expect_test "backprop_divide" =
+  let x = full F32 6.0 [2; 2] in
+  let y = full F32 2.0 [2; 2] in
+  let [E grad; _] = diff Var (fun (E x) -> E (x /$ y)) (E x) in
+  print_endline (Ir.Var.to_string grad);
+  [%expect {| (const(1.000000e+00) / const(2.000000e+00)) |}]
+
+let%expect_test "backprop_negate" =
+  let x = full F32 1.0 [2; 2] in
+  let [E grad; _] = diff Var (fun (E x) -> E (~-$x)) (E x) in
+  print_endline (Ir.Var.to_string grad);
+  [%expect {| (-const(1.000000e+00)) |}]
+
+let%expect_test "backprop_exp" =
+  let x = full F32 1.0 [2; 2] in
+  let [E grad; _] = diff Var (fun (E x) -> E (exp x)) (E x) in
+  print_endline (Ir.Var.to_string grad);
+  [%expect {| (const(1.000000e+00) * exp(diff5(const(1.000000e+00)))) |}]
+
+let%expect_test "backprop_ln" =
+  let x = full F32 2.0 [2; 2] in
+  let [E grad; _] = diff Var (fun (E x) -> E (ln x)) (E x) in
+  print_endline (Ir.Var.to_string grad);
+  [%expect {| (const(1.000000e+00) / diff6(const(2.000000e+00))) |}]
+
+let%expect_test "backprop_sin" =
+  let x = full F32 0.0 [2; 2] in
+  let [E grad; _] = diff Var (fun (E x) -> E (sin x)) (E x) in
+  print_endline (Ir.Var.to_string grad);
+  [%expect {| (const(1.000000e+00) * cos(diff7(const(0.000000e+00)))) |}]
+
+let%expect_test "backprop_cos" =
+  let x = full F32 0.0 [2; 2] in
+  let [E grad; _] = diff Var (fun (E x) -> E (cos x)) (E x) in
+  print_endline (Ir.Var.to_string grad);
+  [%expect {| (const(1.000000e+00) * (-sin(diff8(const(0.000000e+00))))) |}]
+
+let%expect_test "backprop_tanh" =
+  let x = full F32 0.0 [2; 2] in
+  let [E grad; _] = diff Var (fun (E x) -> E (tanh x)) (E x) in
+  print_endline (Ir.Var.to_string grad);
+  [%expect {| (const(1.000000e+00) * (const(1.000000e+00) - (tanh(diff9(const(0.000000e+00))) * tanh(diff9(const(0.000000e+00)))))) |}]
+
+let%expect_test "backprop_sqrt" =
+  let x = full F32 4.0 [2; 2] in
+  let [E grad; _] = diff Var (fun (E x) -> E (sqrt x)) (E x) in
+  print_endline (Ir.Var.to_string grad);
+  [%expect {| (const(1.000000e+00) / ((const(1.000000e+00) + const(1.000000e+00)) * sqrt(diff10(const(4.000000e+00))))) |}]
+
+let%expect_test "backprop_sum" =
+  let x = full F32 1.0 [2; 2] in
+  let [E grad; _] = diff Var (fun (E x) -> E (sum [0] x)) (E x) in
+  print_endline (Ir.Var.to_string grad);
+  [%expect {| transpose(broadcast(const(1.000000e+00), 2), 0,1) |}]
+
+let%expect_test "backprop_transpose" =
+  let x = full F32 1.0 [2; 2] in
+  let [E grad; _] = diff Var (fun (E x) -> E (transpose x [1; 0])) (E x) in
+  print_endline (Ir.Var.to_string grad);
+  [%expect {| transpose(const(1.000000e+00), 1,0) |}]
+
+let%expect_test "backprop_broadcast" =
+  let x = full F32 1.0 [2] in
+  let [E grad; _] = diff Var (fun (E x) -> E (Var.BroadcastInDim (x, [2; 2]))) (E x) in
+  print_endline (Ir.Var.to_string grad);
+  [%expect {| sum(const(1.000000e+00), 0,1) |}]
+
+let%expect_test "backprop_select" =
+  let x = full F32 1.0 [2; 2] in
+  let y = full F32 2.0 [2; 2] in
+  let cond = full I1 true [2; 2] in
+  let [E grad; _] = diff Var (fun (E x) -> E (select cond x y)) (E x) in
+  print_endline (Ir.Var.to_string grad);
+  [%expect {| select(const(true), const(1.000000e+00), const(0.000000e+00)) |}]

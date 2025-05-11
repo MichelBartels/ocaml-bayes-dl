@@ -3,7 +3,7 @@ type ('a, 'b) t = ('a Ir.Var.t -> 'b) * 'a Runtime.HostValue.t
 let return : type a. a -> (unit Hlist.hlist, a) t = fun x -> ((fun [] -> x), [])
 
 let bind : type a b c d.
-    (a, b) t -> (b -> (c Hlist.hlist, d) t) -> ((a -> c) Hlist.hlist, d) t =
+    (a, b) t -> (b -> (c Hlist.hlist, d) t) -> ((a * c) Hlist.hlist, d) t =
  fun (f, params) f' ->
   ( (fun (x :: xs) ->
       let y = f x in
@@ -36,5 +36,5 @@ let params_for : type a b. (a, b) t -> (a, a Ir.Var.t) t =
 
 let param_type t f = Runtime.HostValue.value_type @@ initial t f
 
-let flatten : type a b. ((a -> unit) Hlist.hlist, b) t -> (a, b) t =
+let flatten : type a b. ((a * unit) Hlist.hlist, b) t -> (a, b) t =
  fun (f, [params]) -> ((fun x -> f [x]), params)

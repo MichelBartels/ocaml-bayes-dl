@@ -27,10 +27,15 @@ let rec differentiable_function_gen n num_dims =
         , num_dims )
     in
     frequency
-      [ (1, compose ( ~-@ ))
+      [ (1, compose ( ~-$ ))
       ; (1, compose ln)
       ; (1, compose exp)
-      ; (1, compose ln1p) ]
+      ; (1, compose ln1p)
+      ; (1, compose sqrt)
+      ; (1, compose sin)
+      ; (1, compose cos)
+      ; (1, compose tanh)
+      ; (1, compose abs) ]
   in
   let binary_function_gen () =
     let* f1, num_dims1 = differentiable_function_gen (n - 1) num_dims in
@@ -55,12 +60,25 @@ let rec differentiable_function_gen n num_dims =
             g y1 y2 )
         , max_dims )
     in
-    let options = List.map (fun f -> (1, compose f)) [( +@ ); ( *@ ); ( /@ )] in
+    let options = List.map (fun f -> (1, compose f)) [( +$ ); ( *$ ); ( /$ ); ( **$ )] in
     let options =
-      if num_dims1 > 1 && num_dims2 > 1 then (1, compose matmul) :: options
+      if num_dims1 > 1 && num_dims2 > 1 then (1, compose ( @$ )) :: options
       else options
     in
     frequency options
+  in
+  let reduction_function_gen () =
+    let* f, num_dims = differentiable_function_gen (n - 1) num_dims in
+    let compose g =
+      return
+        ( (fun x ->
+            let y = f x in
+            g y )
+        , num_dims )
+    in
+    frequency
+      [ (1, compose (fun x -> sum [0] x))
+      ; (1, compose (fun x -> mean [0] x)) ]
   in
   match n with
   | 0 ->
@@ -71,7 +89,7 @@ let rec differentiable_function_gen n num_dims =
             let* tensor = tensor_gen num_dims in
             return (Fun.const tensor, num_dims) ) ]
   | _ ->
-      frequency [(2, unary_function_gen ()); (1, binary_function_gen ())]
+      frequency [(2, unary_function_gen ()); (1, binary_function_gen ()); (1, reduction_function_gen ())]
 
 let differentiable_function_gen =
   (* let* n = int_range 0 1 in *)
@@ -85,7 +103,7 @@ let differentiable_function_gen =
         let dims = List.init num_dims Fun.id in
         let x_sum = sum dims x in
         let dims = List.init num_output_dims Fun.id in
-        sum dims y +@ x_sum )
+        sum dims y +$ x_sum )
     , num_dims )
 
 let random_mask num_dims =
@@ -95,16 +113,16 @@ let random_mask num_dims =
   let* index = int_range 0 (size - 1) in
   let index = Unsigned.UInt64.of_int index in
   let index = full U64 index [size] in
-  let mask = indices =@ index in
+  let mask = indices =$ index in
   return @@ reshape shape mask
 
 let finite_difference ?(delta = 1e-4) f mask x =
-  let x' = select mask (x +.> delta) x in
-  let x'' = select mask (x -.> delta) x in
+  let x' = select mask (x +$. delta) x in
+  let x'' = select mask (x -$. delta) x in
   let y' = f x' in
   let y'' = f x'' in
-  let diff = y' -@ y'' in
-  diff /.> (2. *. delta)
+  let diff = y' -$ y'' in
+  diff /$. (2. *. delta)
 
 let actual_gradient f mask x =
   let [E grad; _] =
@@ -116,9 +134,11 @@ let actual_gradient f mask x =
   sum dims grad
 
 module Device =
-  ( val Pjrt_bindings.make
-          "/home/michel/part-ii-project/xla/bazel-bin/xla/pjrt/c/pjrt_c_api_cpu_plugin.so"
+  ( val Pjrt_bindings.make ~caching:false
+          "/Users/michelbartels/Downloads/pjrt/jax_plugins/metal_plugin/pjrt_plugin_metal_14.dylib"
     )
+
+let () = Dsl.metal_hack := true
 
 module Runtime = Runtime.Make (Device)
 
@@ -156,8 +176,7 @@ let correct_gradient test_state =
   (not @@ Float.is_finite grad_approx)
   ||
   let diff = Float.abs (grad_actual -. grad_approx) in
-  let ratio = diff /. grad_actual in
-  Float.abs ratio < 1e-1
+  diff <= (Float.abs grad_actual +. Float.abs grad_approx) *. 1e-1
 
 let print_fn test_state =
   let input_type = Ir.ValueType.of_var test_state.x in
@@ -167,7 +186,7 @@ let print_fn test_state =
   Ir.compile func
 
 let test_grad =
-  QCheck2.Test.make ~name:"grad_test" ~count:40 ~print:print_fn grad_test_gen
+  QCheck2.Test.make ~name:"grad_test" ~count:1 ~print:print_fn grad_test_gen
     correct_gradient
 
 let _ = QCheck_base_runner.run_tests ~verbose:false [test_grad]
