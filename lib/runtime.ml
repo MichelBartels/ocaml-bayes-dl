@@ -5,36 +5,36 @@ let () =
 
 module HostValue = struct
   module List = Hlist.Make (struct
-    type ('a, 'b) t = ('a, 'b) Ir.Tensor.t
+    type ('a, 'b) t = ('a, 'b) Tensor.t
   end)
 
   include List
 
-  let rec zeros : type a. a Ir.ValueType.t -> a t = function
+  let rec zeros : type a. a Value_type.t -> a t = function
     | E (shape, kind) ->
-        E (Ir.Tensor.zeros kind shape)
+        E (Tensor.zeros kind shape)
     | hd :: tl ->
         zeros hd :: zeros tl
     | [] ->
         []
 
   let value_type t =
-    let open Hlist.Map (List) (Ir.ValueType.List) in
-    map {f= Ir.ValueType.of_tensor} t
+    let open Hlist.Map (List) (Value_type.List) in
+    map {f= Value_type.of_tensor} t
 end
 
 module Make (Device : Device_api.S) = struct
   module Buffer = struct
     type ('a, 'b) t =
-      {buffer: Device.buffer; shape: int list; kind: ('a, 'b) Ir.Tensor.kind}
+      {buffer: Device.buffer; shape: int list; kind: ('a, 'b) Tensor.kind}
 
     let make buffer shape kind =
       let buffer = {buffer; shape; kind} in
       buffer
 
     let of_tensor tensor =
-      let shape = Ir.Tensor.shape tensor in
-      let kind = Ir.Tensor.kind tensor in
+      let shape = Tensor.shape tensor in
+      let kind = Tensor.kind tensor in
       let buffer = Device.tensor_to_buffer tensor in
       {buffer; shape; kind}
 
@@ -50,7 +50,7 @@ module Make (Device : Device_api.S) = struct
     include List
 
     let value_type t =
-      let open Hlist.Map (List) (Ir.ValueType.List) in
+      let open Hlist.Map (List) (Value_type.List) in
       map {f= (fun buffer -> (buffer.shape, buffer.kind))} t
 
     let rec of_host_value : type a. a HostValue.t -> a t = function
@@ -72,22 +72,29 @@ module Make (Device : Device_api.S) = struct
           []
       | hd :: tl ->
           to_host_value hd :: to_host_value tl
+
+    let collect : type a. a t -> unit =
+     fun t ->
+      let list = List.to_any_list t in
+      Stdlib.List.iter
+        (fun (Any buffer) -> Device.collect_buffer buffer.buffer)
+        list
   end
 
   module Function : sig
     type ('a, 'b) t
 
     val make :
-      Device.program -> 'a Ir.ValueType.t -> 'b Ir.ValueType.t -> ('a, 'b) t
+      Device.program -> 'a Value_type.t -> 'b Value_type.t -> ('a, 'b) t
 
     val call :
       ('a, 'b) t -> ?collect:bool -> 'a DeviceValue.t -> 'b DeviceValue.t
   end = struct
     type ('a, 'b) t =
-      {program: Device.program; output_type: 'b Ir.ValueType.t; num_outputs: int}
+      {program: Device.program; output_type: 'b Value_type.t; num_outputs: int}
 
     let make program _ output_type =
-      let num_outputs = Ir.ValueType.List.num_elements output_type in
+      let num_outputs = Value_type.List.num_elements output_type in
       {program; output_type; num_outputs}
 
     let rec flatten_inputs : type a.
@@ -102,7 +109,7 @@ module Make (Device : Device_api.S) = struct
 
     let rec nest_outputs : type a.
            Device.buffer list
-        -> a Ir.ValueType.t
+        -> a Value_type.t
         -> a DeviceValue.t * Device.buffer list =
      fun buffers -> function
       | E (shape, kind) ->
@@ -142,26 +149,34 @@ module Make (Device : Device_api.S) = struct
     cache_folder ^ "/" ^ hash
 
   let compile input_type f =
-    let input_type = Ir.ValueType.List.[input_type; E ([], Ir.Tensor.U64)] in
+    let input_type = Value_type.List.[input_type; E ([], F32)] in
     let func =
-      Ir.create_func input_type (fun [x; E seed] ->
+      Translation.create_func input_type (fun [x; E seed] ->
+              let seed = Dsl.convert U64 seed in
           Random.handler
             (fun () ->
               let y = f x in
-              Ir.Var.List.[y; E (Random.current_seed ())] )
+              let seed = Dsl.convert F32 (Random.current_seed ()) in
+              Var.List.[y; E seed] )
             seed )
     in
-    let output_type = Ir.ValueType.of_vars func.outputs in
-    let func_str = Ir.compile func in
+    let output_type = Var.value_types func.outputs in
+    let func_str = Translation.translate func in
+    (*let func_str = {|
+    func.func @main(%1 : tensor<f32>) -> (tensor<f32>) {
+%2 = "stablehlo.convert"(%1) : (tensor<f32>) -> (tensor<ui64>)
+%3 = "stablehlo.optimization_barrier"(%2) : (tensor<ui64>) -> (tensor<ui64>)
+%4 = "stablehlo.multiply"(%2, %3) : (tensor<ui64>, tensor<ui64>) -> (tensor<ui64>)
+%5 = "stablehlo.convert"(%4) : (tensor<ui64>) -> (tensor<f32>)
+"func.return"(%5) : (tensor<f32>) -> ()
+}
+    |} in*)
     let model_path = model_path func_str in
-    let program =
-      if Sys.file_exists model_path then Device.load ~path:model_path
-      else Device.compile_and_store ~program:func_str ~path:model_path
-    in
+    let program = Device.compile ~path:model_path func_str in
     let func = Function.make program input_type output_type in
     let seed =
       ref @@ DeviceValue.of_host_value
-      @@ HostValue.E (Ir.Tensor.scalar U64 @@ Unsigned.UInt64.of_int 0)
+      @@ HostValue.E (Tensor.scalar F32 0.0)
     in
     fun ?collect inputs ->
       let [y; seed'] = Function.call func ?collect [inputs; !seed] in

@@ -1,21 +1,21 @@
 open Iree_bindings
 
 module Device =
-  ( val Pjrt_bindings.make
-          "/home/michel/part-ii-project/xla/bazel-bin/xla/pjrt/c/pjrt_c_api_cpu_plugin.so"
+  ( val Pjrt_bindings.make ~caching:false
+          "/Users/michelbartels/Downloads/pjrt/jax_plugins/metal_plugin/pjrt_plugin_metal_14.dylib"
     )
 
 module Runtime = Runtime.Make (Device)
 open Runtime
 
-let batch_size = 512
+let () = Metal.enable ()
 
-let input_type = ([batch_size; 1; 784], Ir.Tensor.F32)
+let batch_size = 256
+
+let input_type = ([batch_size; 1; 784], Tensor.F32)
 
 let train_step =
-  print_endline "getting param type" ;
   let param_type = Parameters.param_type (E input_type) Vae.train in
-  print_endline "got param type" ;
   compile [param_type; E input_type]
   @@ fun [params; x] -> Parameters.to_fun (Vae.train x) params
 
@@ -24,26 +24,30 @@ let decode =
   compile param_type @@ fun params -> Parameters.to_fun (Vae.decode []) params
 
 let reconstruct =
-  let input_type = ([1; 1; 784], Ir.Tensor.F32) in
+  let input_type = ([1; 1; 784], Tensor.F32) in
   let [param_type] = Parameters.param_type (E input_type) Vae.reconstruct in
   compile [param_type; E input_type]
   @@ fun [params; x] -> Parameters.to_fun (Vae.reconstruct x) [params]
+
 
 let train_step set_msg params x =
   (* let x = DeviceValue.of_host_value @@ E x in *)
   let [loss; params] = train_step [params; x] in
   let (E loss) = DeviceValue.to_host_value loss in
-  set_msg @@ Printf.sprintf "Loss: %15.9f" @@ List.hd @@ Ir.Tensor.to_list loss ;
+  set_msg
+  @@ Printf.sprintf "Loss: %15.9f"
+       (List.hd @@ Tensor.to_list loss)
+       ;
   params
 
 let num_steps = 25000
 
-(* let show_sample params () = *)
-(*   let Runtime.DeviceValue.(inference_params :: _) = params in *)
-(*   let Runtime.DeviceValue.[_; decoder_params] = inference_params in *)
-(*   let y = decode ~collect:false [decoder_params] in *)
-(*   let (E y) = DeviceValue.to_host_value y in *)
-(*   Mnist.plot y *)
+let show_sample params () =
+  let Runtime.DeviceValue.(inference_params :: _) = params in
+  let Runtime.DeviceValue.[_; decoder_params] = inference_params in
+  let y = decode ~collect:false [decoder_params] in
+  let (E y) = DeviceValue.to_host_value y in
+  Mnist.plot y
 
 let save_samples params x i =
   let Runtime.DeviceValue.(inference_params :: _) = params in
@@ -68,7 +72,7 @@ let train () =
   in
   let train_dataset = prepare_dataset Train batch_size in
   let sample_dataset = prepare_dataset Test 1 in
-  let generator = Dataset.to_seq ~num_workers:4 train_dataset in
+  let generator = Dataset.to_seq ~num_workers:4 ~max_fetched:8 train_dataset in
   let generator, set_msg = Dataset.progress num_steps generator in
   let sample_dataset = Dataset.to_seq ~num_workers:1 sample_dataset in
   let train_step = train_step set_msg in
@@ -80,13 +84,11 @@ let train () =
     | _ ->
         params
   in
-  loop 1 params generator sample_dataset
+  loop 0 params generator sample_dataset
 
-let _ = train ()
-
-(* let _ = *)
-(*   let params = train () in *)
-(*   let _ = (params, show_sample) in *)
-(*   while true do *)
-(*     () (\* show_sample params () *\) *)
-(*   done *)
+let _ =
+  let params = train () in
+  let _ = (params, show_sample) in
+  while true do
+    show_sample params ()
+  done

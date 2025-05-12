@@ -15,7 +15,7 @@ let batch f n t =
         f batch )
   ; length= m }
 
-let batch_tensors n = batch Ir.Tensor.concatenate n
+let batch_tensors n = batch Tensor.concatenate n
 
 let map f t = {get= (fun i -> f (t.get i)); length= t.length}
 
@@ -103,7 +103,7 @@ let progress total seq =
       ++ spacer 2 ++ count_to total ++ spacer 2 ++ eta total ++ spacer 2
       ++ elapsed () )
   in
-  let info = Line.(rpad 40 string) in
+  let info = Line.(rpad 80 string) in
   let bar = Multi.(line bar ++ line info) in
   let display = Display.start bar in
   let [set_progress; set_msg] = Display.reporters display in
