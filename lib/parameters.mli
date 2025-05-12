@@ -17,7 +17,6 @@ val initial :
 
 val params_for : ('a, 'b) t -> ('a, 'a Var.t) t
 
-val param_type :
-  'a Value_type.t -> ('a Var.t -> ('b, 'c) t) -> 'b Value_type.t
+val param_type : 'a Value_type.t -> ('a Var.t -> ('b, 'c) t) -> 'b Value_type.t
 
 val flatten : (('a * unit) Hlist.hlist, 'b) t -> ('a, 'b) t

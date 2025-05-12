@@ -1,18 +1,24 @@
 (library
- (name iree_bindings)
- (public_name iree_bindings)
+ (name ocaml_bayes_dl)
+ (public_name ocaml_bayes_dl)
  (libraries
   ctypes
   integers
   progress
   device_api
-  pjrt_bindings
+  (select
+   pjrt.ml
+   from
+   (pjrt_bindings -> pjrt.available.ml)
+   (!pjrt_bindings -> pjrt.unavailable.ml))
+  (select
+   iree.ml
+   from
+   (iree_bindings -> iree.available.ml)
+   (!iree_bindings -> iree.unavailable.ml))
   graphics
   domainslib
   stb_image_write)
-  (preprocess
+ (preprocess
   (pps ppx_inline_test ppx_expect))
-  (inline_tests)
- (instrumentation (backend bisect_ppx))
-
-  )
+ (inline_tests))

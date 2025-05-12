@@ -1,4 +1,4 @@
 (executable
- (public_name iree_bindings)
+ (public_name ocaml_bayes_dl)
  (name main)
- (libraries iree_bindings))
+ (libraries ocaml_bayes_dl))

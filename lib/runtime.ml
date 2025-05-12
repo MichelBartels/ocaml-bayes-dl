@@ -152,7 +152,7 @@ module Make (Device : Device_api.S) = struct
     let input_type = Value_type.List.[input_type; E ([], F32)] in
     let func =
       Translation.create_func input_type (fun [x; E seed] ->
-              let seed = Dsl.convert U64 seed in
+          let seed = Dsl.convert U64 seed in
           Random.handler
             (fun () ->
               let y = f x in
@@ -175,8 +175,7 @@ module Make (Device : Device_api.S) = struct
     let program = Device.compile ~path:model_path func_str in
     let func = Function.make program input_type output_type in
     let seed =
-      ref @@ DeviceValue.of_host_value
-      @@ HostValue.E (Tensor.scalar F32 0.0)
+      ref @@ DeviceValue.of_host_value @@ HostValue.E (Tensor.scalar F32 0.0)
     in
     fun ?collect inputs ->
       let [y; seed'] = Function.call func ?collect [inputs; !seed] in

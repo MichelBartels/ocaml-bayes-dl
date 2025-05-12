@@ -1,11 +1,17 @@
 open QCheck2
 open Gen
-open Iree_bindings
+open Ocaml_bayes_dl
 open Dsl
 
 let () = Printexc.record_backtrace true
 
 let use_metal = Sys.getenv_opt "USE_METAL" = Some "1"
+
+module Device = (val Default_backend.load ())
+
+let () =
+  if use_metal then
+    print_endline "Doing fewer tests as metal does not support all operations"
 
 let dim = 4
 
@@ -28,21 +34,18 @@ let rec differentiable_function_gen n num_dims =
             g y )
         , num_dims )
     in
-    let base_options = [
-(1, compose ( ~-$ )) ;
-      (1, compose ln)
-    ; (1, compose exp)
-    ; (1, compose ln1p)
-    ; (1, compose sqrt)
-    ; (1, compose sin)
-    ; (1, compose cos)
-    ; (1, compose tanh) ]
+    let base_options =
+      [ (1, compose ( ~-$ ))
+      ; (1, compose ln)
+      ; (1, compose exp)
+      ; (1, compose ln1p)
+      ; (1, compose sqrt)
+      ; (1, compose sin)
+      ; (1, compose cos)
+      ; (1, compose tanh) ]
     in
-    let options = 
-      if not use_metal then
-        (1, compose abs) :: base_options
-      else
-        base_options
+    let options =
+      if not use_metal then (1, compose abs) :: base_options else base_options
     in
     frequency options
   in
@@ -56,8 +59,7 @@ let rec differentiable_function_gen n num_dims =
       else
         let broadcast f x =
           let y = f x in
-          Var.BroadcastInDim
-            (y, List.init (max_dims - min_dims) (Fun.const dim))
+          Var.BroadcastInDim (y, List.init (max_dims - min_dims) (Fun.const dim))
         in
         if num_dims1 > num_dims2 then (f1, broadcast f2) else (broadcast f1, f2)
     in
@@ -69,7 +71,9 @@ let rec differentiable_function_gen n num_dims =
             g y1 y2 )
         , max_dims )
     in
-    let options = List.map (fun f -> (1, compose f)) [( +$ ); ( *$ ); ( /$ ); ( **$ )] in
+    let options =
+      List.map (fun f -> (1, compose f)) [( +$ ); ( *$ ); ( /$ ); ( **$ )]
+    in
     let options =
       if num_dims1 > 1 && num_dims2 > 1 then (1, compose ( @$ )) :: options
       else options
@@ -129,15 +133,6 @@ let actual_gradient f mask x =
   let grad = select mask grad (zeros_like grad) in
   sum ~axes:dims grad
 
-module Device =
-  ( val Pjrt_bindings.make ~caching:false
-          "/Users/michelbartels/Downloads/pjrt/jax_plugins/metal_plugin/pjrt_plugin_metal_14.dylib"
-    )
-
-let () = 
-  if use_metal then (print_endline "Doing fewer tests as metal does not support all operations" ; Metal.enable ())
-
-
 module Runtime = Runtime.Make (Device)
 
 type grad_test =
@@ -178,7 +173,9 @@ let correct_gradient test_state =
 
 let print_fn test_state =
   let input_type = Var.value_type test_state.x in
-  let func = Translation.create_func (E input_type) (fun (E x) -> E (test_state.f x)) in
+  let func =
+    Translation.create_func (E input_type) (fun (E x) -> E (test_state.f x))
+  in
   Printf.printf "grad_actual: %f\ngrad_approx: %f\n" !grad_actual_global
     !grad_approx_global ;
   Translation.translate func

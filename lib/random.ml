@@ -22,8 +22,7 @@ let random_u64_to_f32 x =
 
 let key = scalar_u64 "0xc8e4fd154ce32f6d"
 
-type _ Effect.t +=
-  | Counter : int -> (Tensor.u64, Unsigned.uint64) Var.u Effect.t
+type _ Effect.t += Counter : int -> (Tensor.u64, Unsigned.uint64) Var.u Effect.t
 
 let uniform_f32 ?(key = key) shape =
   let total_size = List.fold_left ( * ) 1 shape in
