@@ -2,26 +2,35 @@
 
 (using ctypes 0.3)
 
-(name iree_bindings)
+(name ocaml_bayes_dl)
 
 (generate_opam_files true)
 
 (source
- (github username/reponame))
+ (github MichelBartels/ocaml-bayes-dl))
 
-(authors "Author Name")
+(authors "Michel Bartels")
 
-(maintainers "Maintainer Name")
+(maintainers "Michel Bartels")
 
 (license LICENSE)
 
 (documentation https://url/to/documentation)
 
 (package
- (name iree_bindings)
- (synopsis "A short synopsis")
- (description "A longer description")
- (depends ocaml dune ctypes)
+ (name ocaml_bayes_dl)
+ (depends
+  ocaml
+  dune
+  ctypes
+  integers
+  progress
+  device_api
+  graphics
+  domainslib
+  stb_image_write
+  ppx_inline_test
+  ppx_expect)
  (tags
   (topics "to describe" your project)))
 

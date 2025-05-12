@@ -1,9 +1,6 @@
-open Iree_bindings
+open Ocaml_bayes_dl
 
-module Device =
-  ( val Pjrt_bindings.make ~caching:false
-          "/Users/michelbartels/Downloads/pjrt/jax_plugins/metal_plugin/pjrt_plugin_metal_14.dylib"
-    )
+module Device = (val Default_backend.load ())
 
 module Runtime = Runtime.Make (Device)
 open Runtime
@@ -29,15 +26,11 @@ let reconstruct =
   compile [param_type; E input_type]
   @@ fun [params; x] -> Parameters.to_fun (Vae.reconstruct x) [params]
 
-
 let train_step set_msg params x =
   (* let x = DeviceValue.of_host_value @@ E x in *)
   let [loss; params] = train_step [params; x] in
   let (E loss) = DeviceValue.to_host_value loss in
-  set_msg
-  @@ Printf.sprintf "Loss: %15.9f"
-       (List.hd @@ Tensor.to_list loss)
-       ;
+  set_msg @@ Printf.sprintf "Loss: %15.9f" (List.hd @@ Tensor.to_list loss) ;
   params
 
 let num_steps = 25000

@@ -145,8 +145,7 @@ let diff : type a b c d.
     -> a Var.t
     -> c Hlist.hlist Var.t =
  fun l f inputs ->
-  let rec wrap_inputs : type a b c d.
-      (a, b, c, d) input -> a Var.t -> a Var.t =
+  let rec wrap_inputs : type a b c d. (a, b, c, d) input -> a Var.t -> a Var.t =
    fun l1 l2 ->
     match (l1, l2) with
     | [], [] ->
@@ -300,7 +299,9 @@ let diff : type a b c d.
       | BroadcastInDim (var, dims) -> (
         match Var.value_type var with
         | _, Tensor.F32 ->
-            let reduced_grad = sum ~axes:(List.init (List.length dims) Fun.id) grad in
+            let reduced_grad =
+              sum ~axes:(List.init (List.length dims) Fun.id) grad
+            in
             GradMap.add grads var reduced_grad
         | _ ->
             failwith "can only differentiate broadcasting of f32 tensors" )
@@ -410,88 +411,92 @@ let%expect_test "backprop_add" =
   let x = full F32 1.0 [2; 2] in
   let y = full F32 2.0 [2; 2] in
   let [E grad; _] = diff Var (fun (E x) -> E (x +$ y)) (E x) in
-  print_endline (Var.to_string grad);
+  print_endline (Var.to_string grad) ;
   [%expect {| const(1.000000e+00) |}]
 
 let%expect_test "backprop_subtract" =
   let x = full F32 1.0 [2; 2] in
   let y = full F32 2.0 [2; 2] in
   let [E grad; _] = diff Var (fun (E x) -> E (x -$ y)) (E x) in
-  print_endline (Var.to_string grad);
+  print_endline (Var.to_string grad) ;
   [%expect {| const(1.000000e+00) |}]
 
 let%expect_test "backprop_multiply" =
   let x = full F32 2.0 [2; 2] in
   let y = full F32 3.0 [2; 2] in
   let [E grad; _] = diff Var (fun (E x) -> E (x *$ y)) (E x) in
-  print_endline (Var.to_string grad);
+  print_endline (Var.to_string grad) ;
   [%expect {| (const(1.000000e+00) * const(3.000000e+00)) |}]
 
 let%expect_test "backprop_divide" =
   let x = full F32 6.0 [2; 2] in
   let y = full F32 2.0 [2; 2] in
   let [E grad; _] = diff Var (fun (E x) -> E (x /$ y)) (E x) in
-  print_endline (Var.to_string grad);
+  print_endline (Var.to_string grad) ;
   [%expect {| (const(1.000000e+00) / const(2.000000e+00)) |}]
 
 let%expect_test "backprop_negate" =
   let x = full F32 1.0 [2; 2] in
-  let [E grad; _] = diff Var (fun (E x) -> E (~-$x)) (E x) in
-  print_endline (Var.to_string grad);
+  let [E grad; _] = diff Var (fun (E x) -> E ~-$x) (E x) in
+  print_endline (Var.to_string grad) ;
   [%expect {| (-const(1.000000e+00)) |}]
 
 let%expect_test "backprop_exp" =
   let x = full F32 1.0 [2; 2] in
   let [E grad; _] = diff Var (fun (E x) -> E (exp x)) (E x) in
-  print_endline (Var.to_string grad);
+  print_endline (Var.to_string grad) ;
   [%expect {| (const(1.000000e+00) * exp(diff5(const(1.000000e+00)))) |}]
 
 let%expect_test "backprop_ln" =
   let x = full F32 2.0 [2; 2] in
   let [E grad; _] = diff Var (fun (E x) -> E (ln x)) (E x) in
-  print_endline (Var.to_string grad);
+  print_endline (Var.to_string grad) ;
   [%expect {| (const(1.000000e+00) / diff6(const(2.000000e+00))) |}]
 
 let%expect_test "backprop_sin" =
   let x = full F32 0.0 [2; 2] in
   let [E grad; _] = diff Var (fun (E x) -> E (sin x)) (E x) in
-  print_endline (Var.to_string grad);
+  print_endline (Var.to_string grad) ;
   [%expect {| (const(1.000000e+00) * cos(diff7(const(0.000000e+00)))) |}]
 
 let%expect_test "backprop_cos" =
   let x = full F32 0.0 [2; 2] in
   let [E grad; _] = diff Var (fun (E x) -> E (cos x)) (E x) in
-  print_endline (Var.to_string grad);
+  print_endline (Var.to_string grad) ;
   [%expect {| (const(1.000000e+00) * (-sin(diff8(const(0.000000e+00))))) |}]
 
 let%expect_test "backprop_tanh" =
   let x = full F32 0.0 [2; 2] in
   let [E grad; _] = diff Var (fun (E x) -> E (tanh x)) (E x) in
-  print_endline (Var.to_string grad);
-  [%expect {| (const(1.000000e+00) * (const(1.000000e+00) - (tanh(diff9(const(0.000000e+00))) * tanh(diff9(const(0.000000e+00)))))) |}]
+  print_endline (Var.to_string grad) ;
+  [%expect
+    {| (const(1.000000e+00) * (const(1.000000e+00) - (tanh(diff9(const(0.000000e+00))) * tanh(diff9(const(0.000000e+00)))))) |}]
 
 let%expect_test "backprop_sqrt" =
   let x = full F32 4.0 [2; 2] in
   let [E grad; _] = diff Var (fun (E x) -> E (sqrt x)) (E x) in
-  print_endline (Var.to_string grad);
-  [%expect {| (const(1.000000e+00) / ((const(1.000000e+00) + const(1.000000e+00)) * sqrt(diff10(const(4.000000e+00))))) |}]
+  print_endline (Var.to_string grad) ;
+  [%expect
+    {| (const(1.000000e+00) / ((const(1.000000e+00) + const(1.000000e+00)) * sqrt(diff10(const(4.000000e+00))))) |}]
 
 let%expect_test "backprop_sum" =
   let x = full F32 1.0 [2; 2] in
   let [E grad; _] = diff Var (fun (E x) -> E (sum ~axes:[0] x)) (E x) in
-  print_endline (Var.to_string grad);
+  print_endline (Var.to_string grad) ;
   [%expect {| transpose(broadcast(const(1.000000e+00), 2), 0,1) |}]
 
 let%expect_test "backprop_transpose" =
   let x = full F32 1.0 [2; 2] in
   let [E grad; _] = diff Var (fun (E x) -> E (transpose x [1; 0])) (E x) in
-  print_endline (Var.to_string grad);
+  print_endline (Var.to_string grad) ;
   [%expect {| transpose(const(1.000000e+00), 1,0) |}]
 
 let%expect_test "backprop_broadcast" =
   let x = full F32 1.0 [2] in
-  let [E grad; _] = diff Var (fun (E x) -> E (Var.BroadcastInDim (x, [2; 2]))) (E x) in
-  print_endline (Var.to_string grad);
+  let [E grad; _] =
+    diff Var (fun (E x) -> E (Var.BroadcastInDim (x, [2; 2]))) (E x)
+  in
+  print_endline (Var.to_string grad) ;
   [%expect {| sum(const(1.000000e+00), 0,1) |}]
 
 let%expect_test "backprop_select" =
@@ -499,5 +504,5 @@ let%expect_test "backprop_select" =
   let y = full F32 2.0 [2; 2] in
   let cond = full I1 true [2; 2] in
   let [E grad; _] = diff Var (fun (E x) -> E (select cond x y)) (E x) in
-  print_endline (Var.to_string grad);
+  print_endline (Var.to_string grad) ;
   [%expect {| select(const(true), const(1.000000e+00), const(0.000000e+00)) |}]

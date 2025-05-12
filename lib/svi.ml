@@ -19,12 +19,18 @@ let elbo ?(only_kl = false) observation parametrised_distr =
                 Some
                   (fun (k : (a, _) continuation) ->
                     let sample = Distribution.sample guide batch_size in
-                    let kl = match Distribution.kl guide prior with
-                      | Some kl -> kl
+                    let kl =
+                      match Distribution.kl guide prior with
+                      | Some kl ->
+                          kl
                       | None ->
-                        let log_prob_guide = Distribution.log_prob ?batch_size guide sample in
-                        let log_prob_prior = Distribution.log_prob ?batch_size prior sample in
-                        log_prob_guide -$ log_prob_prior
+                          let log_prob_guide =
+                            Distribution.log_prob ?batch_size guide sample
+                          in
+                          let log_prob_prior =
+                            Distribution.log_prob ?batch_size prior sample
+                          in
+                          log_prob_guide -$ log_prob_prior
                     in
                     kls := kl :: !kls ;
                     continue k sample )
