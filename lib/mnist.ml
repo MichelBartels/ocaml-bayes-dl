@@ -1,15 +1,46 @@
 type t = Train | Test
 
+let base_url = "https://storage.googleapis.com/cvdf-datasets/mnist/"
+
+let download_file filename =
+  if not (Sys.file_exists "datasets") then
+    Unix.mkdir "datasets" 0o755 ;
+  let url = base_url ^ filename in
+  let output_path = "datasets/" ^ filename in
+  let cmd = Printf.sprintf "curl -o %s %s" output_path url in
+  let _ = Sys.command cmd in
+  output_path
+
+let download_dataset () =
+  let files = [
+    "train-images-idx3-ubyte.gz";
+    "train-labels-idx1-ubyte.gz";
+    "t10k-images-idx3-ubyte.gz";
+    "t10k-labels-idx1-ubyte.gz"
+  ] in
+  List.iter (fun file ->
+    let path = "datasets/" ^ file in
+    if not (Sys.file_exists path) then
+      print_endline @@ "Downloading " ^ file ;
+      let _ = download_file file in
+      let cmd = Printf.sprintf "gunzip -f %s" path in
+      ignore (Sys.command cmd)
+  ) files
+
 let images = function
   | Train ->
+      download_dataset ();
       "datasets/train-images-idx3-ubyte"
   | Test ->
+      download_dataset ();
       "datasets/t10k-images-idx3-ubyte"
 
 let labels = function
   | Train ->
+      download_dataset ();
       "datasets/train-labels-idx1-ubyte"
   | Test ->
+      download_dataset ();
       "datasets/t10k-labels-idx1-ubyte"
 
 let read path =
