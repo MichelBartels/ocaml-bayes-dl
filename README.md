@@ -1,5 +1,5 @@
 # OCaml-Bayes-DL
-== Build instructions
+## Build instructions
 To use this package, you need to install [Device-API](https://github.com/MichelBartels/device-api) and a backend. For the backend you can choose between [PJRT](https://github.com/MichelBartels/ocaml-pjrt) (recommended) and [IREE](https://github.com/MichelBartels/ocaml-iree).
 
 To install the dependencies, please follow the instructions in the repository linked.
@@ -10,7 +10,7 @@ Afterwards, you can install this package (assuming that OCaml opam are installed
 opam pin add ocaml_bayes_dl https://github.com/MichelBartels/ocaml-bayes-dl.git
 ```
 
-== Specifying a backend
+## Specifying a backend
 If you are including this library in your project, you need to construct the device using a backend of your choice which you then need to pass to the runtime functor. For example, a PJRT backend can be configured like this:
 
 ``` ocaml
