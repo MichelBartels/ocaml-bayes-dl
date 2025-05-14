@@ -1,6 +1,6 @@
 open Dsl
 
-let rotl x n =
+let rotate x n =
   x >>$. Unsigned.UInt64.of_int n |$ (x <<$. Unsigned.UInt64.of_int (64 - n))
 
 let squares32 ctr key =
@@ -8,9 +8,9 @@ let squares32 ctr key =
   let y = x in
   let z = y +$ key in
   let x = (x *$ x) +$ y in
-  let x = rotl x 32 in
+  let x = rotate x 32 in
   let x = (x *$ x) +$ z in
-  let x = rotl x 32 in
+  let x = rotate x 32 in
   let x = (x *$ x) +$ y in
   (x *$ x) +$ z >>$. Unsigned.UInt64.of_int 32
 

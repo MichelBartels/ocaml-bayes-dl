@@ -1,7 +1,7 @@
 let sample ~prior ~guide ?batch_size () =
   Effect.perform (Distribution.Sample (prior, guide, batch_size))
 
-let elbo_loss ?(only_kl = false) observation parametrised_distr =
+let elbo_loss observation parametrised_distr =
   let open Parameters in
   flatten
   @@
@@ -42,8 +42,7 @@ let elbo_loss ?(only_kl = false) observation parametrised_distr =
   return
   @@ Var.List.E
        ( kl
-       -$ Distribution.log_prob distribution observation
-          *$. if only_kl then 0. else 1. )
+       -$ Distribution.log_prob distribution observation )
 
 let inference parametrised =
   let open Parameters in

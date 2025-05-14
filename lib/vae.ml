@@ -60,8 +60,8 @@ let vae x =
 
 let optim = Optim.adamw ~lr:1e-3
 
-let train ?(only_kl = false) (Var.List.E x) =
-  optim @@ Svi.elbo_loss ~only_kl x @@ vae x
+let train (Var.List.E x) =
+  optim @@ Svi.elbo_loss x @@ vae x
 
 let decode Var.List.[] =
   let open Parameters in
