@@ -5,7 +5,7 @@ open Dsl
 
 let () = Printexc.record_backtrace true
 
-let use_metal = Sys.getenv_opt "USE_METAL" = Some "1"
+let use_metal = Option.is_some @@ Sys.getenv_opt "METAL"
 
 module Device = (val Default_backend.load ())
 
