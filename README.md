@@ -1,4 +1,4 @@
-= OCaml-Bayes-DL
+# OCaml-Bayes-DL
 == Build instructions
 To use this package, you need to install [Device-API](https://github.com/MichelBartels/device-api) and a backend. For the backend you can choose between [PJRT](https://github.com/MichelBartels/ocaml-pjrt) (recommended) and [IREE](https://github.com/MichelBartels/ocaml-iree).
 
@@ -20,5 +20,5 @@ module Runtime = Runtime.Make (Device)
 
 If you are running the tests, a backend is determined at runtime. To specify the backend either pass the `PJRT_PATH` enviroment variable or the `IREE_BACKEND` environment variable. If you are using PJRT and metal, you also need to set the `METAL` enviroment variable to enable workarounds due to Apple's incomplete PJRT metal plugin.
 
-== Running the VAE example
+## Running the VAE example
 After installing the package, you can run the command `ocaml_bayes_dl` which will automatically download the MNIST dataset and store samples throughout the training process in a `samples` folder. The backend can either be specified using environment variables as described or interactively when running the program.
