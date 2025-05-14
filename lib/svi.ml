@@ -19,17 +19,18 @@ let elbo_loss observation parametrised_distr =
                 Some
                   (fun (k : (a, _) continuation) ->
                     let sample = Distribution.sample guide batch_size in
-                    let reduction = fun x -> if batch_size = None then sum x else sum @@ mean ~axes:[0] x in
                     let kl =
-                      match Distribution.kl ~reduction guide prior with
-                      | Some kl ->
+                      match Distribution.kl guide prior, batch_size with
+                      | Some kl, Some batch_size ->
+                          kl *$. (float_of_int batch_size)
+                      | Some kl, None ->
                           kl
-                      | None ->
+                      | None, _ ->
                           let log_prob_guide =
-                            Distribution.log_prob ?batch_size ~reduction guide sample
+                            Distribution.log_prob ?batch_size guide sample
                           in
                           let log_prob_prior =
-                            Distribution.log_prob ?batch_size ~reduction prior sample
+                            Distribution.log_prob ?batch_size prior sample
                           in
                           log_prob_guide -$ log_prob_prior
                     in
