@@ -88,7 +88,7 @@ let sample dist batch_size =
       let u = Random.uniform_f32 shape in
       ~-$(ln u) /$ rate
 
-let log_prob ?batch_size dist x =
+let log_prob ?batch_size ?(reduction=(fun x -> sum x)) dist x =
   match dist with
   | Normal (mean, stddev) ->
       let mean, stddev =
@@ -103,7 +103,7 @@ let log_prob ?batch_size dist x =
       let scaled_diff = (x -$ mean) /$ stddev in
       let squared_error = scaled_diff *$ scaled_diff /$. 2. in
       let regulariser = (Float.log (2. *. Float.pi) /. 2.) +.$ ln stddev in
-      sum @@ (~-$squared_error +$ regulariser)
+      reduction @@ (~-$squared_error +$ regulariser)
   | Uniform (low, high) ->
       let low, high =
         match batch_size with
@@ -114,7 +114,7 @@ let log_prob ?batch_size dist x =
         | None ->
             (low, high)
       in
-      sum @@ ~-$(ln (high -$ low))
+      reduction @@ ~-$(ln (high -$ low))
   | Beta (alpha, beta) ->
       let alpha, beta =
         match batch_size with
@@ -125,8 +125,7 @@ let log_prob ?batch_size dist x =
         | None ->
             (alpha, beta)
       in
-      sum
-      @@ ((alpha -$. 1.) *$ ln x)
+      reduction @@ ((alpha -$. 1.) *$ ln x)
          +$ ((beta -$. 1.) *$ ln (1. -.$ x))
          -$ ln_beta alpha beta
   | Exponential rate ->
@@ -137,7 +136,7 @@ let log_prob ?batch_size dist x =
         | None ->
             rate
       in
-      sum @@ (ln rate -$ (rate *$ x))
+      reduction @@ (ln rate -$ (rate *$ x))
 
 let expectation dist =
   match dist with
@@ -150,7 +149,7 @@ let expectation dist =
   | Exponential rate ->
       1. /.$ rate
 
-let kl p q =
+let kl ?(reduction=(fun x -> sum x)) p q =
   (* p = guide q = prior *)
   match (p, q) with
   | Normal (mean_p, std_p), Normal (mean_q, std_q) ->
@@ -158,20 +157,20 @@ let kl p q =
       let var_ratio = std_ratio *$ std_ratio in
       let scaled_diff = (mean_p -$ mean_q) /$ std_q in
       let squared_diff = scaled_diff *$ scaled_diff in
-      Some (sum @@ ((var_ratio +$ squared_diff -$. 1. -$ ln var_ratio) /$. 2.))
+      Some (reduction ((var_ratio +$ squared_diff -$. 1. -$ ln var_ratio) /$. 2.))
   | Beta (alpha_p, beta_p), Beta (alpha_q, beta_q) ->
       let alpha_sum_p = alpha_p +$ beta_p in
       Some
-        ( sum
+        (reduction
         @@ ln_beta alpha_q beta_q -$ ln_beta alpha_p beta_p
            +$ ((alpha_p -$ alpha_q) *$ digamma alpha_p)
            +$ ((beta_p -$ beta_q) *$ digamma beta_p)
            +$ ((alpha_q -$ alpha_p +$ beta_q -$ beta_p) *$ digamma alpha_sum_p)
         )
   | Exponential rate_p, Exponential rate_q ->
-      Some (sum @@ (ln (rate_q /$ rate_p) +$ ((rate_p -$ rate_q) /$ rate_p)))
+      Some (reduction @@ (ln (rate_p /$ rate_q) +$ (rate_q /$ rate_p) -$. 1.))
   | Uniform (low_p, high_p), Uniform (low_q, high_q) ->
-      Some (sum @@ ln ((high_q -$ low_q) /$ (high_p -$ low_p)))
+      Some (reduction @@ ln ((high_q -$ low_q) /$ (high_p -$ low_p)))
   | Normal (mean_p, std_p), Uniform (low_q, high_q) ->
       let range = high_q -$ low_q in
       let sqrt_two_pi = Float.sqrt (2.0 *. Float.pi) *.$ ones_like mean_p in
@@ -183,7 +182,7 @@ let kl p q =
       let term3 =
         (mean_p -$ high_q) *$ (mean_p -$ high_q) /$ (two *$ std_p *$ std_p)
       in
-      Some (sum @@ (term1 +$ term2 +$ term3))
+      Some (reduction @@ (term1 +$ term2 +$ term3))
   | Beta (alpha_p, beta_p), Normal (mean_q, std_q) ->
       let sqrt_two_pi = Float.sqrt (2.0 *. Float.pi) *.$ ones_like alpha_p in
       let term1 = ln (sqrt_two_pi *$ std_q) in
@@ -194,7 +193,7 @@ let kl p q =
         /$ (two *$ std_q *$ std_q)
       in
       let term3 = ln_beta alpha_p beta_p in
-      Some (sum @@ (term1 +$ term2 +$ term3))
+      Some (reduction @@ (term1 +$ term2 +$ term3))
   | Exponential rate_p, Normal (mean_q, std_q) ->
       let sqrt_two_pi = Float.sqrt (2.0 *. Float.pi) *.$ ones_like rate_p in
       let term1 = ln (sqrt_two_pi *$ std_q) in
@@ -206,7 +205,18 @@ let kl p q =
         /$ (two *$ std_q *$ std_q)
       in
       let term3 = ln rate_p in
-      Some (sum @@ (term1 +$ term2 +$ term3))
+      Some (reduction @@ (term1 +$ term2 +$ term3))
   | _ ->
       (* if there is no closed form solution or good approximation, we just use monte carlo *)
       None
+
+let to_string dist =
+  match dist with
+  | Normal (mean, std) ->
+      Printf.sprintf "Normal(mean=%s, std=%s)" (Var.to_string mean) (Var.to_string std)
+  | Uniform (low, high) ->
+      Printf.sprintf "Uniform(low=%s, high=%s)" (Var.to_string low) (Var.to_string high)
+  | Beta (alpha, beta) ->
+      Printf.sprintf "Beta(alpha=%s, beta=%s)" (Var.to_string alpha) (Var.to_string beta)
+  | Exponential rate ->
+      Printf.sprintf "Exponential(rate=%s)" (Var.to_string rate)

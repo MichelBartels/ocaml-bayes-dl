@@ -79,7 +79,7 @@ let ( *$ ) : type a b. (a, b) Var.u -> (a, b) Var.u -> (a, b) Var.u =
  fun a b ->
   assert_same_shape a b ;
   match Var.value_type a with
-  | _, (Tensor.I64 | Tensor.U64) when !Metal.enabled ->
+  | _, (Tensor.I64 | Tensor.U64) when !Metal.enabled && a = b ->
       (* The Metal PJRT plugin rewrites multiplications to a square instruction if the second argument is the same as the first argument.
        However, there are no integer square instructions. *)
       Var.Multiply (Var.OptimizationBarrier a, b)

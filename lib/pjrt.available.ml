@@ -5,7 +5,7 @@ let ( let* ) = Option.bind
 let try_load () =
   let* path = Sys.getenv_opt "PJRT_PATH" in
   let metal = Option.is_some @@ Sys.getenv_opt "METAL" in
-  Metal.enable () ;
+  if metal then Metal.enable () ;
   Some (Pjrt_bindings.make ~caching:(not metal) path)
 
 let try_load_with_prompt () =

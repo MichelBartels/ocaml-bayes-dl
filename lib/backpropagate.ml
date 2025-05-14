@@ -16,7 +16,7 @@ module VarSet = Set.Make (struct
   let compare = Stdlib.compare
 end)
 
-let topological_order : type a b. (a, b) Var.u -> Var.any list =
+let reverse_topological_order : type a b. (a, b) Var.u -> Var.any list =
  fun var ->
   let rec loop : type a b.
       VarSet.t -> Var.any list -> (a, b) Var.u -> VarSet.t * Var.any list =
@@ -166,7 +166,7 @@ let diff : type a b c d.
   in
   let inputs = wrap_inputs l inputs in
   let (E output) = f inputs in
-  let order = topological_order output in
+  let order = reverse_topological_order output in
   let backprop : type a b. (a, b) Var.u -> GradMap.t -> GradMap.t =
    fun var grads ->
     match GradMap.get grads var with

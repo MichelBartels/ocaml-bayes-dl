@@ -1,7 +1,7 @@
 let sample ~prior ~guide ?batch_size () =
   Effect.perform (Distribution.Sample (prior, guide, batch_size))
 
-let elbo ?(only_kl = false) observation parametrised_distr =
+let elbo_loss ?(only_kl = false) observation parametrised_distr =
   let open Parameters in
   flatten
   @@
@@ -19,16 +19,17 @@ let elbo ?(only_kl = false) observation parametrised_distr =
                 Some
                   (fun (k : (a, _) continuation) ->
                     let sample = Distribution.sample guide batch_size in
+                    let reduction = fun x -> if batch_size = None then sum x else sum @@ mean ~axes:[0] x in
                     let kl =
-                      match Distribution.kl guide prior with
+                      match Distribution.kl ~reduction guide prior with
                       | Some kl ->
                           kl
                       | None ->
                           let log_prob_guide =
-                            Distribution.log_prob ?batch_size guide sample
+                            Distribution.log_prob ?batch_size ~reduction guide sample
                           in
                           let log_prob_prior =
-                            Distribution.log_prob ?batch_size prior sample
+                            Distribution.log_prob ?batch_size ~reduction prior sample
                           in
                           log_prob_guide -$ log_prob_prior
                     in

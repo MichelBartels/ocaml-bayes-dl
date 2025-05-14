@@ -1,6 +1,6 @@
 open Dsl
 
-let sigmoid x = 1.0 /.$ (1.0 +.$ exp (~-.1.0 *.$ x))
+let sigmoid x = 1.0 /.$ (1.0 +.$ exp (~-$x))
 
 let bayesian_parameter batch_size shape std_prior =
   let open Parameters in
@@ -61,7 +61,7 @@ let vae x =
 let optim = Optim.adamw ~lr:1e-3
 
 let train ?(only_kl = false) (Var.List.E x) =
-  optim @@ Svi.elbo ~only_kl x @@ vae x
+  optim @@ Svi.elbo_loss ~only_kl x @@ vae x
 
 let decode Var.List.[] =
   let open Parameters in
