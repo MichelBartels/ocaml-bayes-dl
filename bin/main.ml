@@ -5,9 +5,7 @@ module Device = (val Default_backend.load ())
 module Runtime = Runtime.Make (Device)
 open Runtime
 
-let () = Metal.enable ()
-
-let batch_size = 256
+let batch_size = 512
 
 let input_type = ([batch_size; 1; 784], Tensor.F32)
 
@@ -42,7 +40,8 @@ let show_sample params () =
   let (E y) = DeviceValue.to_host_value y in
   Mnist.plot y
 
-let save_samples params x i =
+let save_samples params sample_set i =
+  let x, sample_set = Option.get @@ Seq.uncons sample_set in
   let Runtime.DeviceValue.(inference_params :: _) = params in
   let Runtime.DeviceValue.[_; decoder_params] = inference_params in
   let y = decode ~collect:false [decoder_params] in
@@ -51,7 +50,8 @@ let save_samples params x i =
   Mnist.save y (Printf.sprintf "samples/sample_%d.png" i) ;
   let y = reconstruct ~collect:false [inference_params; x] in
   let (E y) = DeviceValue.to_host_value y in
-  Mnist.save y (Printf.sprintf "samples/recon_%d.png" i)
+  Mnist.save y (Printf.sprintf "samples/recon_%d.png" i) ;
+  sample_set
 
 let prepare_dataset dataset_type batch_size =
   let dataset = Mnist.load_images dataset_type in
@@ -65,14 +65,14 @@ let train () =
   in
   let train_dataset = prepare_dataset Train batch_size in
   let sample_dataset = prepare_dataset Test 1 in
-  let generator = Dataset.to_seq ~num_workers:4 ~max_fetched:8 train_dataset in
+  let generator = Dataset.to_seq ~num_workers:8 ~max_fetched:8 train_dataset in
   let generator, set_msg = Dataset.progress num_steps generator in
-  let sample_dataset = Dataset.to_seq ~num_workers:1 sample_dataset in
+  let sample_dataset = Dataset.to_seq ~num_workers:1 ~max_fetched:1 sample_dataset in
   let train_step = train_step set_msg in
   let rec loop i params train_set sample_set =
-    match (Seq.uncons train_set, Seq.uncons sample_set) with
-    | Some (batch, train_set), Some (sample, sample_set) ->
-        if i mod 1000 = 0 then save_samples params sample i ;
+    match Seq.uncons train_set with
+    | Some (batch, train_set) ->
+        let sample_set = if i mod 1000 = 0 then save_samples params sample_set i else sample_set in
         loop (i + 1) (train_step params batch) train_set sample_set
     | _ ->
         params
