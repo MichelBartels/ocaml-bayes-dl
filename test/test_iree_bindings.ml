@@ -34,7 +34,7 @@ let rec differentiable_function_gen n num_dims =
             g y )
         , num_dims )
     in
-    let base_options =
+    let options =
       [ (1, compose ( ~-$ ))
       ; (1, compose ln)
       ; (1, compose exp)
@@ -43,9 +43,6 @@ let rec differentiable_function_gen n num_dims =
       ; (1, compose sin)
       ; (1, compose cos)
       ; (1, compose tanh) ]
-    in
-    let options =
-      if not use_metal then (1, compose abs) :: base_options else base_options
     in
     frequency options
   in
@@ -181,7 +178,7 @@ let print_fn test_state =
   Translation.translate func
 
 let test_grad =
-  QCheck2.Test.make ~name:"grad_test" ~count:40 ~print:print_fn grad_test_gen
+  QCheck2.Test.make ~name:"grad_test" ~count:100 ~print:print_fn grad_test_gen
     correct_gradient
 
 let _ = QCheck_base_runner.run_tests ~verbose:false [test_grad]
