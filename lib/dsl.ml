@@ -344,6 +344,24 @@ let%expect_test "broadcast_scalar_like" =
   print_endline (Var.to_string result) ;
   [%expect {| broadcast(const(1.000000e+00), 2,2) |}]
 
+let broadcast var output_shape =
+  let input_shape = Var.shape var in
+  let common_dims = List.length input_shape in
+  let remaining_shape = List.take (List.length output_shape - common_dims) output_shape in
+  Var.BroadcastInDim (var, remaining_shape)
+
+let%expect_test "broadcast" =
+  let var = Var.Constant (Tensor.of_list F32 [2] [1.0; 2.0]) in
+  let result = broadcast var [2; 2] in
+  print_endline (Var.to_string result) ;
+  [%expect {| broadcast(const([1.000000e+00, 2.000000e+00]), 2) |}]
+
+let%expect_test "broadcast_with_common_dims" =
+  let var = Var.Constant (Tensor.of_list F32 [2; 3] [1.0; 2.0; 3.0; 4.0; 5.0; 6.0]) in
+  let result = broadcast var [4; 2; 3] in
+  print_endline (Var.to_string result) ;
+  [%expect {| broadcast(const([[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]), 4) |}]
+
 let tensor_to_ir tensor = Var.Constant tensor
 
 let%expect_test "tensor_to_ir" =
